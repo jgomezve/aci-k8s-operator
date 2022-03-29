@@ -54,6 +54,10 @@ jobs:
           curl -L -o kubebuilder https://go.kubebuilder.io/dl/latest/$(go env GOOS)/$(go env GOARCH)
           chmod +x kubebuilder && mv kubebuilder /usr/local/bin/
 
+      - name: Checkout to repository
+        id: checkout-code
+        uses: actions/checkout@master
+
       - name: Run tests
         id: test-code
         run: make test
