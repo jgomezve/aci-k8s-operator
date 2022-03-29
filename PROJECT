@@ -13,4 +13,13 @@ resources:
   kind: Tenant
   path: github.com/jgomezve/aci-operator/api/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: aci.cisco
+  group: apic
+  kind: ApplicationProfile
+  path: github.com/jgomezve/aci-operator/api/v1alpha1
+  version: v1alpha1
 version: "3"

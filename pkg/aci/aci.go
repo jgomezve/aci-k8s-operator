@@ -34,3 +34,29 @@ func (ac *ApicClient) CreateTenant(name, description string) error {
 	}
 	return nil
 }
+
+func (ac *ApicClient) DeleteTenant(name string) error {
+	err := ac.client.DeleteTenant(name)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ac *ApicClient) CreateApplicationProfile(name, description, tenantName string) error {
+	fvAppAttr := models.ApplicationProfileAttributes{}
+	fvApp := models.NewApplicationProfile(fmt.Sprintf("ap-%s", name), fmt.Sprintf("uni/tn-%s", tenantName), description, fvAppAttr)
+	err := ac.client.Save(fvApp)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ac *ApicClient) DeleteApplicationProfile(name, tenantName string) error {
+	err := ac.client.DeleteApplicationProfile(name, tenantName)
+	if err != nil {
+		return err
+	}
+	return nil
+}

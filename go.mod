@@ -3,6 +3,7 @@ module github.com/jgomezve/aci-operator
 go 1.17
 
 require (
+	github.com/ciscoecosystem/aci-go-client v1.27.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.17.0
 	k8s.io/apimachinery v0.23.0
@@ -22,7 +23,6 @@ require (
 	github.com/apparentlymart/go-textseg v1.0.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
-	github.com/ciscoecosystem/aci-go-client v1.27.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
 	github.com/form3tech-oss/jwt-go v3.2.3+incompatible // indirect
