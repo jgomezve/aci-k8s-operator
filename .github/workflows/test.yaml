@@ -91,7 +91,7 @@ jobs:
     name: Notify
     runs-on: ubuntu-latest
     if: always()
-     needs:
+    needs:
      - build
     steps:
       - name: Webex Notification
