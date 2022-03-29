@@ -90,6 +90,7 @@ jobs:
   notification:
     name: Notify
     runs-on: ubuntu-latest
+    if: always()
     needs:
     - build
     steps:
