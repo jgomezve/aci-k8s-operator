@@ -50,9 +50,9 @@ jobs:
           curl -L -o kubebuilder https://go.kubebuilder.io/dl/latest/$(go env GOOS)/$(go env GOARCH)
           chmod +x kubebuilder && mv kubebuilder /usr/local/bin/
 
-      # - name: Checkout to repository
-      #   id: checkout-code
-      #   uses: actions/checkout@master
+      - name: Checkout to repository
+        id: checkout-code
+        uses: actions/checkout@master
 
       - name: Run tests
         id: test-code
@@ -70,7 +70,7 @@ jobs:
         uses: actions/checkout@master
 
       - name: Log into registry
-        #if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main'
         uses: docker/login-action@dd4fa0671be5250ee6f50aedf4cb05514abda2c7
         with:
           registry: docker.io
@@ -79,7 +79,7 @@ jobs:
 
 
       - name: Build and push Docker image
-        #if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main'
         id: build-and-push
         uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a
         with:
