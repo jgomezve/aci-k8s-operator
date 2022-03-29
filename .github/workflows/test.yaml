@@ -22,14 +22,6 @@ jobs:
         run: |
           make fmt
 
-  format:
-    name: Format
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout to repository
-        id: checkout-code
-        uses: actions/checkout@master
-
   test:
     name: Unit Test
     runs-on: ubuntu-latest
@@ -58,9 +50,9 @@ jobs:
           curl -L -o kubebuilder https://go.kubebuilder.io/dl/latest/$(go env GOOS)/$(go env GOARCH)
           chmod +x kubebuilder && mv kubebuilder /usr/local/bin/
 
-      - name: Checkout to repository
-        id: checkout-code
-        uses: actions/checkout@master
+      # - name: Checkout to repository
+      #   id: checkout-code
+      #   uses: actions/checkout@master
 
       - name: Run tests
         id: test-code
@@ -73,6 +65,10 @@ jobs:
     - test
     - lint
     steps:
+      - name: Checkout to repository
+        id: checkout-code
+        uses: actions/checkout@master
+
       - name: Log into registry
         #if: github.ref == 'refs/heads/main'
         uses: docker/login-action@dd4fa0671be5250ee6f50aedf4cb05514abda2c7
@@ -95,8 +91,8 @@ jobs:
     name: Notify
     runs-on: ubuntu-latest
     if: always()
-    needs:
-    - build
+     needs:
+     - build
     steps:
       - name: Webex Notification
         if: always()
@@ -105,7 +101,7 @@ jobs:
           TOKEN: ${{ secrets.WEBEX_TOKEN }}
           ROOMID: ${{ secrets.WEBEX_ROOM_ID }}
           MESSAGE: |
-            [**[${{ github }}] ${{ github.repository }} #${{ github.run_number }}**](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            [**[${{ needs.build.result }}] ${{ github.repository }} #${{ github.run_number }}**](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
             * Commit: [${{ github.event.head_commit.message }}](${{ github.event.head_commit.url }})[${{ github.event.pull_request.title }}](${{ github.event.pull_request.html_url }})
             * Author: ${{ github.event.sender.login }}
             * Branch: ${{ github.ref }} ${{ github.head_ref }}
