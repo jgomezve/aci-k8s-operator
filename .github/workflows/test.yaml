@@ -22,15 +22,19 @@ jobs:
         run: |
           make fmt
 
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
-        with:
-          version: v1.33
-          args: --timeout=5m
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout to repository
+        id: checkout-code
+        uses: actions/checkout@master
 
   test:
     name: Unit Test
     runs-on: ubuntu-latest
+    needs:
+    - lint
     steps:
       - name: Setup go
         uses: actions/setup-go@v2
@@ -101,7 +105,7 @@ jobs:
           TOKEN: ${{ secrets.WEBEX_TOKEN }}
           ROOMID: ${{ secrets.WEBEX_ROOM_ID }}
           MESSAGE: |
-            [**[${{ github.action_status }}] ${{ github.repository }} #${{ github.run_number }}**](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            [**[${{ github }}] ${{ github.repository }} #${{ github.run_number }}**](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
             * Commit: [${{ github.event.head_commit.message }}](${{ github.event.head_commit.url }})[${{ github.event.pull_request.title }}](${{ github.event.pull_request.html_url }})
             * Author: ${{ github.event.sender.login }}
             * Branch: ${{ github.ref }} ${{ github.head_ref }}
