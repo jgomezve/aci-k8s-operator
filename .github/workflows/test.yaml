@@ -30,10 +30,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Go Format
-        run: |
-          make fmt
-
       - name: Install Kubebuilder
         id: install-kubebuilder
         run:  |
@@ -43,6 +39,10 @@ jobs:
       - name: Checkout to repository
         id: checkout-code
         uses: actions/checkout@master
+
+      - name: Go Format
+        run: |
+          make fmt
 
       - name: Run tests
         id: test-code
