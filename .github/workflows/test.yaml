@@ -1,0 +1,80 @@
+name: Test
+
+on:
+  push:
+    paths-ignore:
+      - '*.md'
+
+  pull_request:
+    branches: [ master ]
+    types: [opened, edited, reopened, synchronize]
+
+jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.17'
+        id: go
+
+      - name: Cache go mod
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Install Kubebuilder
+        id: install-kubebuilder
+        run:  |
+          curl -L -o kubebuilder https://go.kubebuilder.io/dl/latest/$(go env GOOS)/$(go env GOARCH)
+          chmod +x kubebuilder && mv kubebuilder /usr/local/bin/
+
+      - name: Checkout to repository
+        id: checkout-code
+        uses: actions/checkout@master
+
+      - name: Go Format
+        run: |
+          make fmt
+
+      - name: Run tests
+        id: test-code
+        run: make test
+
+      - name: Log into registry
+        #if: github.ref == 'refs/heads/main'
+        uses: docker/login-action@dd4fa0671be5250ee6f50aedf4cb05514abda2c7
+        with:
+          registry: docker.io
+          username: jgomezve
+          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+
+
+      - name: Build and push Docker image
+        #if: github.ref == 'refs/heads/main'
+        id: build-and-push
+        uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ github.repository }}:latest
+
+      - name: Webex Notification
+        if: always()
+        uses: qsnyder/action-wxt@master
+        env:
+          TOKEN: ${{ secrets.WEBEX_TOKEN }}
+          ROOMID: ${{ secrets.WEBEX_ROOM_ID }}
+          MESSAGE: |
+            [**[${{ job.status }}] ${{ github.repository }} #${{ github.run_number }}**](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            * Commit: [${{ github.event.head_commit.message }}](${{ github.event.head_commit.url }})[${{ github.event.pull_request.title }}](${{ github.event.pull_request.html_url }})
+            * Author: ${{ github.event.sender.login }}
+            * Branch: ${{ github.ref }} ${{ github.head_ref }}
+            * Event: ${{ github.event_name }}
