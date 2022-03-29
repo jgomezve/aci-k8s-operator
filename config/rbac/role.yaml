@@ -8,6 +8,32 @@ rules:
 - apiGroups:
   - apic.aci.cisco
   resources:
+  - applicationprofiles
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apic.aci.cisco
+  resources:
+  - applicationprofiles/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - apic.aci.cisco
+  resources:
+  - applicationprofiles/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - apic.aci.cisco
+  resources:
   - tenants
   verbs:
   - create
