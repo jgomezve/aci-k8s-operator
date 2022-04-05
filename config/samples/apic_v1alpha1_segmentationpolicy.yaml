@@ -1,0 +1,6 @@
+apiVersion: apic.aci.cisco/v1alpha1
+kind: SegmentationPolicy
+metadata:
+  name: segmentationpolicy-sample
+spec:
+  name: segmentationpolicy-sample

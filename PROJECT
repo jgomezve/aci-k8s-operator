@@ -22,4 +22,13 @@ resources:
   kind: ApplicationProfile
   path: github.com/jgomezve/aci-operator/api/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: aci.cisco
+  group: apic
+  kind: SegmentationPolicy
+  path: github.com/jgomezve/aci-operator/api/v1alpha1
+  version: v1alpha1
 version: "3"

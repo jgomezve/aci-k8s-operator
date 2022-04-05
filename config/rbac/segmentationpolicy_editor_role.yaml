@@ -1,0 +1,24 @@
+# permissions for end users to edit segmentationpolicies.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: segmentationpolicy-editor-role
+rules:
+- apiGroups:
+  - apic.aci.cisco
+  resources:
+  - segmentationpolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apic.aci.cisco
+  resources:
+  - segmentationpolicies/status
+  verbs:
+  - get
