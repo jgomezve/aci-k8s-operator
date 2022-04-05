@@ -3,4 +3,12 @@ kind: SegmentationPolicy
 metadata:
   name: segmentationpolicy-sample
 spec:
-  name: segmentationpolicy-sample
+  name: segPol1
+  tenant: k8s-tenant
+  namespaces:
+    - ns1
+    - ns2
+    - ns3
+  rules:
+    - eth: a
+      ip: b

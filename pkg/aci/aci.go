@@ -60,3 +60,22 @@ func (ac *ApicClient) DeleteApplicationProfile(name, tenantName string) error {
 	}
 	return nil
 }
+
+func (ac *ApicClient) CreateEndpointGroup(name, description, appName, tenantName string) error {
+	fvAEpg := models.ApplicationEPGAttributes{}
+	fvAEpg.Annotation = "orchestrator:kubernetes"
+	fvApp := models.NewApplicationEPG(fmt.Sprintf("epg-%s", name), fmt.Sprintf("uni/tn-%s/ap-%s", tenantName, appName), description, fvAEpg)
+	err := ac.client.Save(fvApp)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ac *ApicClient) DeleteEndpointGroup(name, appName, tenantName string) error {
+	err := ac.client.DeleteApplicationEPG(name, appName, tenantName)
+	if err != nil {
+		return err
+	}
+	return nil
+}

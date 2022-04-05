@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -30,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/jgomezve/aci-operator/api/v1alpha1"
 	apicv1alpha1 "github.com/jgomezve/aci-operator/api/v1alpha1"
 	"github.com/jgomezve/aci-operator/pkg/aci"
 )
@@ -58,12 +60,34 @@ type SegmentationPolicyReconciler struct {
 func (r *SegmentationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	logger.Info(fmt.Sprintf("Reconciling Segmentation Policy. Name %s - Ns %s", req.Name, req.Namespace))
+	segPolObject := &v1alpha1.SegmentationPolicy{}
+	err := r.Get(ctx, types.NamespacedName{Name: req.Name, Namespace: req.Namespace}, segPolObject)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
+		logger.Error(err, "Error occurred while fetching the Segmentation Policy resource")
+		return ctrl.Result{}, err
+	}
+
+	if !segPolObject.GetDeletionTimestamp().IsZero() {
+		logger.Info("Deletion detected! Proceeding to cleanup the finalizers...")
+		// TODO
+		return ctrl.Result{}, nil
+	}
+
 	namespaces := &corev1.NamespaceList{}
 	r.List(ctx, namespaces)
 
-	for _, ns := range namespaces.Items {
-		fmt.Println(ns.ObjectMeta.Name)
+	r.ApicClient.CreateApplicationProfile(segPolObject.Spec.Name, "", segPolObject.Spec.Tenant)
+	logger.Info(fmt.Sprintf("Creating Application Profile %s", segPolObject.Spec.Name))
+	for _, nsCluster := range namespaces.Items {
+		for _, nsPol := range segPolObject.Spec.Namespaces {
+			if nsCluster.ObjectMeta.Name == nsPol {
+				logger.Info(fmt.Sprintf("Creating EPG for Namespace %s", nsPol))
+				r.ApicClient.CreateEndpointGroup(nsPol, "K8s Operator", segPolObject.Spec.Name, segPolObject.Spec.Tenant)
+			}
+		}
 	}
 	return ctrl.Result{}, nil
 }
@@ -82,7 +106,7 @@ func (r *SegmentationPolicyReconciler) nameSpaceSegPolicyMapFunc(object client.O
 
 	fmt.Printf("Namespace %s modified\n", ns.Name)
 
-	requests := make([]reconcile.Request, 1)
-	requests[0] = reconcile.Request{NamespacedName: types.NamespacedName{Namespace: "testNs", Name: "testName"}}
-	return requests
+	// requests := make([]reconcile.Request, 1)
+	// requests[0] = reconcile.Request{NamespacedName: types.NamespacedName{Namespace: "testNs", Name: "testName"}}
+	return []reconcile.Request{}
 }

@@ -29,7 +29,15 @@ type SegmentationPolicySpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	//+kubebuilder:validation:MinLength=0
-	Name string `json:"name"`
+	Name       string     `json:"name"`
+	Tenant     string     `json:"tenant"`
+	Namespaces []string   `json:"namespaces"`
+	Rules      []RuleSpec `json:"rules"`
+}
+
+type RuleSpec struct {
+	Eth string `json:"eth"`
+	IP  string `json:"ip"`
 }
 
 // SegmentationPolicyStatus defines the observed state of SegmentationPolicy
