@@ -48,7 +48,7 @@ var (
 type SegmentationPolicyReconciler struct {
 	client.Client
 	Scheme     *runtime.Scheme
-	ApicClient *aci.ApicClient
+	ApicClient aci.ApicInterface
 }
 
 //+kubebuilder:rbac:groups=apic.aci.cisco,resources=segmentationpolicies,verbs=get;list;watch;create;update;patch;delete
@@ -131,9 +131,9 @@ func (r *SegmentationPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 }
 
 func (r *SegmentationPolicyReconciler) nameSpaceSegPolicyMapFunc(object client.Object) []reconcile.Request {
-	ns := object.(*corev1.Namespace)
+	//ns := object.(*corev1.Namespace)
 
-	fmt.Printf("Namespace %s modified\n", ns.Name)
+	//fmt.Printf("Namespace %s modified\n", ns.Name)
 
 	// requests := make([]reconcile.Request, 1)
 	// requests[0] = reconcile.Request{NamespacedName: types.NamespacedName{Namespace: "testNs", Name: "testName"}}

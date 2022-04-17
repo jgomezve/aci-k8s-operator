@@ -22,6 +22,8 @@ type ApicInterface interface {
 	DeleteApplicationProfile(name, tenantName string) error
 	CreateEndpointGroup(name, description, appName, tenantName string) error
 	DeleteEndpointGroup(name, appName, tenantName string) error
+	CreateFilterAndFilterEntry(tenantName, name, eth, ip string, port int) error
+	DeleteFilter(name, tenantName string) error
 	AddTagAnnotation(key, value, parentDn string) error
 }
 

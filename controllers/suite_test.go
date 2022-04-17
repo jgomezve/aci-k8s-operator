@@ -95,6 +95,13 @@ var _ = BeforeSuite(func() {
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
+	err = (&SegmentationPolicyReconciler{
+		Client:     k8sManager.GetClient(),
+		Scheme:     k8sManager.GetScheme(),
+		ApicClient: &apicClient,
+	}).SetupWithManager(k8sManager)
+	Expect(err).ToNot(HaveOccurred())
+
 	go func() {
 		defer GinkgoRecover()
 		err = k8sManager.Start(ctx)
