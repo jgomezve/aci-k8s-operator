@@ -49,6 +49,11 @@ func (ac *ApicClientMocks) EpgExists(name, appName, tenantName string) (bool, er
 func (ac *ApicClientMocks) AddTagAnnotationToEpg(name, appName, tenantName, key, value string) error {
 	return nil
 }
+
+func (ac *ApicClientMocks) RemoveTagAnnotation(name, appName, tenantName, key string) error {
+	return nil
+}
+
 func (ac *ApicClientMocks) CreateFilterAndFilterEntry(tenantName, name, eth, ip string, port int) error {
 	if !ac.FilterExists(name) {
 		fmt.Printf("Creating Filter %s in Tenant %s\n", name, tenantName)
@@ -58,6 +63,10 @@ func (ac *ApicClientMocks) CreateFilterAndFilterEntry(tenantName, name, eth, ip 
 }
 
 func (ac *ApicClientMocks) GetEpgWithAnnotation(appName, tenantName, key string) ([]string, error) {
+	return []string{}, nil
+}
+
+func (ac *ApicClientMocks) GetAnnotationsEpg(name, appName, tenantName string) ([]string, error) {
 	return []string{}, nil
 }
 

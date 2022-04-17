@@ -36,7 +36,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/jgomezve/aci-operator/api/v1alpha1"
-	apicv1alpha1 "github.com/jgomezve/aci-operator/api/v1alpha1"
 	"github.com/jgomezve/aci-operator/pkg/aci"
 )
 
@@ -139,11 +138,23 @@ func (r *SegmentationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 			}
 		}
 		if toDel {
-			//TODO: Validate other annotations before deleting EPG
-			logger.Info(fmt.Sprintf("Deleting EPG  %s", epg))
-			err := r.ApicClient.DeleteEndpointGroup(epg, fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), segPolObject.Spec.Tenant)
+			logger.Info(fmt.Sprintf("EPG must be updated %s", epg))
+			annotations, err := r.ApicClient.GetAnnotationsEpg(epg, fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), segPolObject.Spec.Tenant)
+			logger.Info(fmt.Sprintf("Annotations configured on EPG %s : %s", epg, annotations))
 			if err != nil {
 				return ctrl.Result{}, err
+			}
+			if len(annotations) == 1 && annotations[0] == segPolObject.Spec.Name {
+				logger.Info(fmt.Sprintf("Deleting EPG  %s", epg))
+				if err := r.ApicClient.DeleteEndpointGroup(epg, fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), segPolObject.Spec.Tenant); err != nil {
+					return ctrl.Result{}, err
+				}
+			} else if len(annotations) > 1 {
+				logger.Info(fmt.Sprintf("Removing annotation %s from EPG %s", segPolObject.Spec.Name, epg))
+				if err := r.ApicClient.RemoveTagAnnotation(epg, fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Spec.Name); err != nil {
+					return ctrl.Result{}, err
+				}
+
 			}
 		}
 	}
@@ -170,7 +181,7 @@ func (r *SegmentationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 // SetupWithManager sets up the controller with the Manager.
 func (r *SegmentationPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&apicv1alpha1.SegmentationPolicy{}).
+		For(&v1alpha1.SegmentationPolicy{}).
 		Watches(&source.Kind{Type: &corev1.Namespace{}},
 			handler.EnqueueRequestsFromMapFunc(r.nameSpaceSegPolicyMapFunc)).
 		Complete(r)
@@ -204,6 +215,29 @@ func (r *SegmentationPolicyReconciler) deleteSegPolicyFinalizerCallback(ctx cont
 	if err := r.ApicClient.DeleteContract(segPolObject.Spec.Tenant, segPolObject.Spec.Name); err != nil {
 		return fmt.Errorf("error occurred while deleting contract: %w", err)
 	}
+
+	// Delete Annotation or EPGs
+	for _, nsPol := range segPolObject.Spec.Namespaces {
+		logger.Info(fmt.Sprintf("EPG must be updated %s", nsPol))
+		annotations, err := r.ApicClient.GetAnnotationsEpg(nsPol, fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), segPolObject.Spec.Tenant)
+		logger.Info(fmt.Sprintf("Annotations configured on EPG %s : %s", nsPol, annotations))
+		if err != nil {
+			return err
+		}
+		if len(annotations) == 1 && annotations[0] == segPolObject.Spec.Name {
+			logger.Info(fmt.Sprintf("Deleting EPG  %s", nsPol))
+			if err := r.ApicClient.DeleteEndpointGroup(nsPol, fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), segPolObject.Spec.Tenant); err != nil {
+				return err
+			}
+		} else if len(annotations) > 1 {
+			logger.Info(fmt.Sprintf("Removing annotation %s from EPG %s", segPolObject.Spec.Name, nsPol))
+			if err := r.ApicClient.RemoveTagAnnotation(nsPol, fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Spec.Name); err != nil {
+				return err
+			}
+
+		}
+	}
+
 	// remove the cleanup-row finalizer from the postgresWriterObject
 	controllerutil.RemoveFinalizer(segPolObject, "finalizers.segmentationpolicies.apic.aci.cisco/delete")
 	if err := r.Update(ctx, segPolObject); err != nil {
