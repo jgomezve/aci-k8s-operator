@@ -15,6 +15,8 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/jgomezve/aci-operator/api/v1alpha1"
@@ -68,6 +70,15 @@ var _ = Describe("Segmentation Policy controller", func() {
 					return err == nil
 				}, timeout, interval).Should(BeTrue())
 				Expect(createdSegPol.Spec.Name).Should(Equal(SegmentationPolicyName))
+
+				for _, rule := range createdSegPol.Spec.Rules {
+					// TODO: Keep the name logic out of the Test. Test using mock-only functions
+					filterName := fmt.Sprintf("%s_%s%s%s", createdSegPol.Spec.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
+					Eventually(func() bool {
+						return apicClient.FilterExists(filterName)
+					}, timeout, interval).Should(BeTrue())
+				}
+
 			})
 		})
 		It("Should delete APIC filters when a Segmentation Policy is deleted", func() {
@@ -79,6 +90,13 @@ var _ = Describe("Segmentation Policy controller", func() {
 					err := k8sClient.Get(ctx, segPolLookupKey, createdSegPol)
 					return err == nil
 				}, timeout, interval).Should(BeFalse())
+				for _, rule := range createdSegPol.Spec.Rules {
+					// TODO: Keep the name logic out of the Test. Test using mock-only functions
+					filterName := fmt.Sprintf("%s_%s%s%s", createdSegPol.Spec.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
+					Eventually(func() bool {
+						return apicClient.FilterExists(filterName)
+					}, timeout, interval).Should(BeFalse())
+				}
 			})
 		})
 	})

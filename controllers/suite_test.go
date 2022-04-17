@@ -41,11 +41,12 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var (
-	cfg       *rest.Config
-	k8sClient client.Client // You'll be using this client in your tests.
-	testEnv   *envtest.Environment
-	ctx       context.Context
-	cancel    context.CancelFunc
+	cfg        *rest.Config
+	k8sClient  client.Client // You'll be using this client in your tests.
+	testEnv    *envtest.Environment
+	ctx        context.Context
+	cancel     context.CancelFunc
+	apicClient aci.ApicInterface
 )
 
 func TestAPIs(t *testing.T) {
@@ -86,19 +87,20 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	apicClient := aci.ApicMockClient
+	apicClient = &aci.ApicMockClient
+	Expect(apicClient).NotTo(BeNil())
 
-	err = (&TenantReconciler{
-		Client:     k8sManager.GetClient(),
-		Scheme:     k8sManager.GetScheme(),
-		ApicClient: &apicClient,
-	}).SetupWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
+	// err = (&TenantReconciler{
+	// 	Client:     k8sManager.GetClient(),
+	// 	Scheme:     k8sManager.GetScheme(),
+	// 	ApicClient: apicClient,
+	// }).SetupWithManager(k8sManager)
+	// Expect(err).ToNot(HaveOccurred())
 
 	err = (&SegmentationPolicyReconciler{
 		Client:     k8sManager.GetClient(),
 		Scheme:     k8sManager.GetScheme(),
-		ApicClient: &apicClient,
+		ApicClient: apicClient,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

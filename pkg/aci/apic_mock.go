@@ -5,7 +5,11 @@ import (
 )
 
 type ApicClientMocks struct {
-	Ip string
+	filters []string
+}
+
+func init() {
+	ApicMockClient.filters = []string{}
 }
 
 var (
@@ -39,13 +43,31 @@ func (ac *ApicClientMocks) DeleteEndpointGroup(name, appName, tenantName string)
 }
 
 func (ac *ApicClientMocks) CreateFilterAndFilterEntry(tenantName, name, eth, ip string, port int) error {
-	fmt.Printf("Creating Filter %s in Tenant %s\n", name, tenantName)
+	if !ac.FilterExists(name) {
+		fmt.Printf("Creating Filter %s in Tenant %s\n", name, tenantName)
+		ac.filters = append(ac.filters, name)
+	}
 	return nil
 }
 
 func (ac *ApicClientMocks) DeleteFilter(tenantName, name string) error {
 	fmt.Printf("Deleting Filter %s in Tenant %s\n", name, tenantName)
+	for i, v := range ac.filters {
+		if v == name {
+			ac.filters = append(ac.filters[:i], ac.filters[i+1:]...)
+			break
+		}
+	}
 	return nil
+}
+
+func (ac *ApicClientMocks) FilterExists(name string) bool {
+	for _, flt := range ac.filters {
+		if flt == name {
+			return true
+		}
+	}
+	return false
 }
 
 func (ac *ApicClientMocks) AddTagAnnotation(key, value, parentDn string) error {

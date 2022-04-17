@@ -25,6 +25,7 @@ type ApicInterface interface {
 	CreateFilterAndFilterEntry(tenantName, name, eth, ip string, port int) error
 	DeleteFilter(name, tenantName string) error
 	AddTagAnnotation(key, value, parentDn string) error
+	FilterExists(name string) bool
 }
 
 func NewApicClient(host, user, password string) (*ApicClient, error) {
@@ -143,4 +144,8 @@ func (ac *ApicClient) AddTagAnnotation(key, value, parentDn string) error {
 		return err
 	}
 	return nil
+}
+
+func (ac *ApicClient) FilterExists(name string) bool {
+	return true
 }
