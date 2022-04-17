@@ -39,7 +39,7 @@ import (
 type TenantReconciler struct {
 	client.Client
 	Scheme     *runtime.Scheme
-	ApicClient *aci.ApicClient
+	ApicClient aci.ApicInterface
 }
 
 //+kubebuilder:rbac:groups=apic.aci.cisco,resources=tenants,verbs=get;list;watch;create;update;patch;delete

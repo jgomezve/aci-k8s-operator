@@ -34,6 +34,40 @@ rules:
 - apiGroups:
   - apic.aci.cisco
   resources:
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apic.aci.cisco
+  resources:
+  - segmentationpolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apic.aci.cisco
+  resources:
+  - segmentationpolicies/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - apic.aci.cisco
+  resources:
+  - segmentationpolicies/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - apic.aci.cisco
+  resources:
   - tenants
   verbs:
   - create

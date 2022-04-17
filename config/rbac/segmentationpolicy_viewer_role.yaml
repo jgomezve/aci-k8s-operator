@@ -1,0 +1,20 @@
+# permissions for end users to view segmentationpolicies.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: segmentationpolicy-viewer-role
+rules:
+- apiGroups:
+  - apic.aci.cisco
+  resources:
+  - segmentationpolicies
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apic.aci.cisco
+  resources:
+  - segmentationpolicies/status
+  verbs:
+  - get
