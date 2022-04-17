@@ -2,6 +2,7 @@ package aci
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/ciscoecosystem/aci-go-client/client"
 	"github.com/ciscoecosystem/aci-go-client/models"
@@ -96,6 +97,37 @@ func (ac *ApicClient) CreateEndpointGroup(name, description, appName, tenantName
 
 func (ac *ApicClient) DeleteEndpointGroup(name, appName, tenantName string) error {
 	err := ac.client.DeleteApplicationEPG(name, appName, tenantName)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ac *ApicClient) CreateFilterAndFilterEntry(tenantName, name, eth, ip string, port int) error {
+
+	vzFilterAttr := models.FilterAttributes{}
+
+	vzEntryAttr := models.FilterEntryAttributes{}
+	vzEntryAttr.EtherT = eth
+	vzEntryAttr.Prot = ip
+	vzEntryAttr.DFromPort = strconv.Itoa(port)
+	vzEntryAttr.DToPort = strconv.Itoa(port)
+
+	fvFilter := models.NewFilter(fmt.Sprintf("flt-%s", name), fmt.Sprintf("uni/tn-%s", tenantName), "", vzFilterAttr)
+	err := ac.client.Save(fvFilter)
+	if err != nil {
+		return err
+	}
+	fvFilterEntry := models.NewFilterEntry(fmt.Sprintf("e-%s", name), fvFilter.DistinguishedName, "", vzEntryAttr)
+	err = ac.client.Save(fvFilterEntry)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ac *ApicClient) DeleteFilter(tenantName, name string) error {
+	err := ac.client.DeleteFilter(name, tenantName)
 	if err != nil {
 		return err
 	}

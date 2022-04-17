@@ -50,9 +50,8 @@ spec:
                       type: string
                     ip:
                       type: string
-                  required:
-                  - eth
-                  - ip
+                    port:
+                      type: integer
                   type: object
                 type: array
               tenant:

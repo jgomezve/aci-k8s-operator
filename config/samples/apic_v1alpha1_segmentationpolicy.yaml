@@ -10,5 +10,10 @@ spec:
     - ns2
     - ns3
   rules:
-    - eth: a
-      ip: b
+    - eth: ip
+      ip: tcp
+      port: 80
+    - eth: arp
+    - eth: ip
+      ip: udp
+      port: 53

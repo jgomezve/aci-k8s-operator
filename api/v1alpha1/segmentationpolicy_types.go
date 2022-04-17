@@ -36,8 +36,9 @@ type SegmentationPolicySpec struct {
 }
 
 type RuleSpec struct {
-	Eth string `json:"eth"`
-	IP  string `json:"ip"`
+	Eth  string `json:"eth,omitempty"`
+	IP   string `json:"ip,omitempty"`
+	Port int    `json:"port,omitempty"`
 }
 
 // SegmentationPolicyStatus defines the observed state of SegmentationPolicy

@@ -19,6 +19,8 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -26,14 +28,20 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/go-logr/logr"
 	"github.com/jgomezve/aci-operator/api/v1alpha1"
 	apicv1alpha1 "github.com/jgomezve/aci-operator/api/v1alpha1"
 	"github.com/jgomezve/aci-operator/pkg/aci"
+)
+
+var (
+	finalizersSegPol []string = []string{"finalizers.segmentationpolicies.apic.aci.cisco/delete"}
 )
 
 // SegmentationPolicyReconciler reconciles a SegmentationPolicy object
@@ -70,24 +78,45 @@ func (r *SegmentationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, err
 	}
 
+	// if the event is not related to delete, just check if the finalizers are rightfully set on the resource
+	if segPolObject.GetDeletionTimestamp().IsZero() && !reflect.DeepEqual(finalizersSegPol, segPolObject.GetFinalizers()) {
+		// set the finalizers of the Tenant to the rightful ones
+		segPolObject.SetFinalizers(finalizersSegPol)
+		if err := r.Update(ctx, segPolObject); err != nil {
+			logger.Error(err, "error occurred while setting the finalizers of the Tenant resource")
+			return ctrl.Result{}, err
+		}
+	}
+
 	if !segPolObject.GetDeletionTimestamp().IsZero() {
 		logger.Info("Deletion detected! Proceeding to cleanup the finalizers...")
-		// TODO
+		if err := r.deleteSegPolicyFinalizerCallback(ctx, logger, segPolObject); err != nil {
+			logger.Error(err, "error occurred while dealing with the delete finalizer")
+			return ctrl.Result{}, err
+		}
 		return ctrl.Result{}, nil
 	}
 
 	namespaces := &corev1.NamespaceList{}
 	r.List(ctx, namespaces)
 
-	r.ApicClient.CreateApplicationProfile(segPolObject.Spec.Name, "", segPolObject.Spec.Tenant)
-	logger.Info(fmt.Sprintf("Creating Application Profile %s", segPolObject.Spec.Name))
-	for _, nsCluster := range namespaces.Items {
-		for _, nsPol := range segPolObject.Spec.Namespaces {
-			if nsCluster.ObjectMeta.Name == nsPol {
-				logger.Info(fmt.Sprintf("Creating EPG for Namespace %s", nsPol))
-				r.ApicClient.CreateEndpointGroup(nsPol, "K8s Operator", segPolObject.Spec.Name, segPolObject.Spec.Tenant)
-			}
-		}
+	// r.ApicClient.CreateApplicationProfile(segPolObject.Spec.Name, "", segPolObject.Spec.Tenant)
+	// logger.Info(fmt.Sprintf("Creating Application Profile %s", segPolObject.Spec.Name))
+	// for _, nsCluster := range namespaces.Items {
+	// 	for _, nsPol := range segPolObject.Spec.Namespaces {
+	// 		if nsCluster.ObjectMeta.Name == nsPol {
+	// 			logger.Info(fmt.Sprintf("Creating EPG for Namespace %s", nsPol))
+	// 			r.ApicClient.CreateEndpointGroup(nsPol, "K8s Operator", segPolObject.Spec.Name, segPolObject.Spec.Tenant)
+	// 		}
+	// 	}
+	// }
+
+	for _, rule := range segPolObject.Spec.Rules {
+		eth := rule.Eth
+		ip := rule.IP
+		port := rule.Port
+		filterName := fmt.Sprintf("%s_%s%s%s", segPolObject.Spec.Name, eth, ip, strconv.Itoa(port))
+		r.ApicClient.CreateFilterAndFilterEntry(segPolObject.Spec.Tenant, filterName, eth, ip, port)
 	}
 	return ctrl.Result{}, nil
 }
@@ -109,4 +138,27 @@ func (r *SegmentationPolicyReconciler) nameSpaceSegPolicyMapFunc(object client.O
 	// requests := make([]reconcile.Request, 1)
 	// requests[0] = reconcile.Request{NamespacedName: types.NamespacedName{Namespace: "testNs", Name: "testName"}}
 	return []reconcile.Request{}
+}
+
+func (r *SegmentationPolicyReconciler) deleteSegPolicyFinalizerCallback(ctx context.Context, logger logr.Logger, segPolObject *v1alpha1.SegmentationPolicy) error {
+
+	// delete the row with the above 'id' from the above 'table'
+
+	for _, rule := range segPolObject.Spec.Rules {
+		eth := rule.Eth
+		ip := rule.IP
+		port := rule.Port
+		filterName := fmt.Sprintf("%s_%s%s%s", segPolObject.Spec.Name, eth, ip, strconv.Itoa(port))
+		if err := r.ApicClient.DeleteFilter(segPolObject.Spec.Tenant, filterName); err != nil {
+			return fmt.Errorf("error occurred while deleting filter: %w", err)
+		}
+
+	}
+	// remove the cleanup-row finalizer from the postgresWriterObject
+	controllerutil.RemoveFinalizer(segPolObject, "finalizers.segmentationpolicies.apic.aci.cisco/delete")
+	if err := r.Update(ctx, segPolObject); err != nil {
+		return fmt.Errorf("error occurred while removing the finalizer: %w", err)
+	}
+	logger.Info("cleaned up the 'finalizers.segmentationpolicies.apic.aci.cisco/delete' finalizer successfully")
+	return nil
 }
