@@ -14,6 +14,16 @@ type ApicClient struct {
 	client   *client.Client
 }
 
+type ApicInterface interface {
+	CreateTenant(name, description string) error
+	DeleteTenant(name string) error
+	CreateApplicationProfile(name, description, tenantName string) error
+	DeleteApplicationProfile(name, tenantName string) error
+	CreateEndpointGroup(name, description, appName, tenantName string) error
+	DeleteEndpointGroup(name, appName, tenantName string) error
+	AddTagAnnotation(key, value, parentDn string) error
+}
+
 func NewApicClient(host, user, password string) (*ApicClient, error) {
 	ac := &ApicClient{
 		host:     host,
