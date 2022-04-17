@@ -26,6 +26,8 @@ type ApicInterface interface {
 	DeleteFilter(name, tenantName string) error
 	AddTagAnnotation(key, value, parentDn string) error
 	FilterExists(name string) bool
+	CreateContract(tenantName, name string, filters []string) error
+	DeleteContract(tenantName, name string) error
 }
 
 func NewApicClient(host, user, password string) (*ApicClient, error) {
@@ -106,9 +108,46 @@ func (ac *ApicClient) DeleteEndpointGroup(name, appName, tenantName string) erro
 	return nil
 }
 
+func (ac *ApicClient) CreateContract(tenantName, name string, filters []string) error {
+	vzBrCPAttr := models.ContractAttributes{}
+	vzBrCPAttr.Name = name
+	vzBrCPAttr.Annotation = "orchestrator:kubernetes"
+
+	vzSubjAttr := models.ContractSubjectAttributes{}
+	vzSubjAttr.Name = name
+	vzSubjAttr.RevFltPorts = "yes"
+
+	vzBrCP := models.NewContract(fmt.Sprintf("brc-%s", name), fmt.Sprintf("uni/tn-%s", tenantName), "", vzBrCPAttr)
+	err := ac.client.Save(vzBrCP)
+	if err != nil {
+		return err
+	}
+	vzSubj := models.NewContractSubject(fmt.Sprintf("subj-%s", name), vzBrCP.DistinguishedName, "", vzSubjAttr)
+	err = ac.client.Save(vzSubj)
+	if err != nil {
+		return err
+	}
+	for _, flt := range filters {
+		err = ac.client.CreateRelationvzRsSubjFiltAttFromContractSubject(vzSubj.DistinguishedName, flt)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (ac *ApicClient) DeleteContract(tenantName, name string) error {
+	err := ac.client.DeleteContract(name, tenantName)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (ac *ApicClient) CreateFilterAndFilterEntry(tenantName, name, eth, ip string, port int) error {
 
 	vzFilterAttr := models.FilterAttributes{}
+	vzFilterAttr.Annotation = "orchestrator:kubernetes"
 
 	vzEntryAttr := models.FilterEntryAttributes{}
 	vzEntryAttr.EtherT = eth

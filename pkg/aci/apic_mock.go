@@ -70,6 +70,13 @@ func (ac *ApicClientMocks) FilterExists(name string) bool {
 	return false
 }
 
+func (ac *ApicClientMocks) CreateContract(tenantName, name string, filters []string) error {
+	return nil
+}
+func (ac *ApicClientMocks) DeleteContract(tenantName, name string) error {
+	return nil
+}
+
 func (ac *ApicClientMocks) AddTagAnnotation(key, value, parentDn string) error {
 	return nil
 }

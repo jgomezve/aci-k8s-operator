@@ -3,7 +3,7 @@ kind: SegmentationPolicy
 metadata:
   name: segmentationpolicy-sample
 spec:
-  name: segPol1
+  name: segpol1
   tenant: k8s-tenant
   namespaces:
     - ns1

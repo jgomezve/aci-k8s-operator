@@ -23,7 +23,7 @@ jobs:
           make fmt
 
   test:
-    name: Unit Test
+    name: Test
     runs-on: ubuntu-latest
     needs:
     - lint

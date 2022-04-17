@@ -111,13 +111,17 @@ func (r *SegmentationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 	// 	}
 	// }
 
+	filters := []string{}
 	for _, rule := range segPolObject.Spec.Rules {
 		eth := rule.Eth
 		ip := rule.IP
 		port := rule.Port
 		filterName := fmt.Sprintf("%s_%s%s%s", segPolObject.Spec.Name, eth, ip, strconv.Itoa(port))
+		filters = append(filters, filterName)
 		r.ApicClient.CreateFilterAndFilterEntry(segPolObject.Spec.Tenant, filterName, eth, ip, port)
 	}
+	r.ApicClient.CreateContract(segPolObject.Spec.Tenant, segPolObject.Spec.Name, filters)
+
 	return ctrl.Result{}, nil
 }
 
@@ -151,6 +155,9 @@ func (r *SegmentationPolicyReconciler) deleteSegPolicyFinalizerCallback(ctx cont
 		filterName := fmt.Sprintf("%s_%s%s%s", segPolObject.Spec.Name, eth, ip, strconv.Itoa(port))
 		if err := r.ApicClient.DeleteFilter(segPolObject.Spec.Tenant, filterName); err != nil {
 			return fmt.Errorf("error occurred while deleting filter: %w", err)
+		}
+		if err := r.ApicClient.DeleteContract(segPolObject.Spec.Tenant, segPolObject.Spec.Name); err != nil {
+			return fmt.Errorf("error occurred while deleting contract: %w", err)
 		}
 
 	}
