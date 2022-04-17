@@ -47,7 +47,6 @@ var _ = Describe("Segmentation Policy controller", func() {
 				Namespace: SegmentationPolicyNamespace,
 			},
 			Spec: apicv1alpha1.SegmentationPolicySpec{
-				Name:       SegmentationPolicyName,
 				Tenant:     SegmentationPolicyTenant,
 				Namespaces: []string{"nsA", "nsB"},
 				Rules: []v1alpha1.RuleSpec{
@@ -69,11 +68,11 @@ var _ = Describe("Segmentation Policy controller", func() {
 					err := k8sClient.Get(ctx, segPolLookupKey, createdSegPol)
 					return err == nil
 				}, timeout, interval).Should(BeTrue())
-				Expect(createdSegPol.Spec.Name).Should(Equal(SegmentationPolicyName))
+				Expect(createdSegPol.Name).Should(Equal(SegmentationPolicyName))
 
 				for _, rule := range createdSegPol.Spec.Rules {
 					// TODO: Keep the name logic out of the Test. Test using mock-only functions
-					filterName := fmt.Sprintf("%s_%s%s%s", createdSegPol.Spec.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
+					filterName := fmt.Sprintf("%s_%s%s%s", createdSegPol.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
 					Eventually(func() bool {
 						return apicClient.FilterExists(filterName)
 					}, timeout, interval).Should(BeTrue())
@@ -92,7 +91,7 @@ var _ = Describe("Segmentation Policy controller", func() {
 				}, timeout, interval).Should(BeFalse())
 				for _, rule := range createdSegPol.Spec.Rules {
 					// TODO: Keep the name logic out of the Test. Test using mock-only functions
-					filterName := fmt.Sprintf("%s_%s%s%s", createdSegPol.Spec.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
+					filterName := fmt.Sprintf("%s_%s%s%s", createdSegPol.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
 					Eventually(func() bool {
 						return apicClient.FilterExists(filterName)
 					}, timeout, interval).Should(BeFalse())
