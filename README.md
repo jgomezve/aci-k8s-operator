@@ -1,6 +1,6 @@
 # ACI Kubernetes Operator
 
-[![Tests](https://github.com/jgomezve/aci-k8s-operator/actions/workflows/test.yml/badge.svg)](https://github.com/jgomezve/aci-k8s-operator/actions/workflows/test.yaml)
+[![Tests](https://github.com/jgomezve/aci-k8s-operator/actions/workflows/test.yaml/badge.svg)](https://github.com/jgomezve/aci-k8s-operator/actions/workflows/test.yaml)
 
 ```yaml
 apiVersion: apic.aci.cisco/v1alpha1
