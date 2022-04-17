@@ -100,17 +100,55 @@ func (r *SegmentationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 	namespaces := &corev1.NamespaceList{}
 	r.List(ctx, namespaces)
 
-	// r.ApicClient.CreateApplicationProfile(segPolObject.Spec.Name, "", segPolObject.Spec.Tenant)
-	// logger.Info(fmt.Sprintf("Creating Application Profile %s", segPolObject.Spec.Name))
-	// for _, nsCluster := range namespaces.Items {
-	// 	for _, nsPol := range segPolObject.Spec.Namespaces {
-	// 		if nsCluster.ObjectMeta.Name == nsPol {
-	// 			logger.Info(fmt.Sprintf("Creating EPG for Namespace %s", nsPol))
-	// 			r.ApicClient.CreateEndpointGroup(nsPol, "K8s Operator", segPolObject.Spec.Name, segPolObject.Spec.Tenant)
-	// 		}
-	// 	}
-	// }
+	// Always create/overwrite the same Application Profile
+	r.ApicClient.CreateApplicationProfile(fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), "", segPolObject.Spec.Tenant)
+	logger.Info(fmt.Sprintf("Creating Application Profile %s", segPolObject.Spec.Name))
 
+	// Create EPGs based on the Namespaces listes
+	for _, nsCluster := range namespaces.Items {
+		for _, nsPol := range segPolObject.Spec.Namespaces {
+			// Only create EPGs for those Namespaces already configured on the cluster
+			if nsCluster.ObjectMeta.Name == nsPol {
+				exists, _ := r.ApicClient.EpgExists(nsPol, fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), segPolObject.Spec.Tenant)
+				// If the EPG already exist, just add a new annotation. (An EPG/NS can be included in multiple policies)
+				if exists {
+					logger.Info(fmt.Sprintf("Adding annotation to EPG  %s", nsPol))
+					r.ApicClient.AddTagAnnotationToEpg(nsPol, fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Spec.Name, segPolObject.Spec.Name)
+					// If not, create the EPG and add annotation
+				} else {
+					logger.Info(fmt.Sprintf("Creating EPG for Namespace %s", nsPol))
+					r.ApicClient.CreateEndpointGroup(nsPol, "", fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), segPolObject.Spec.Tenant)
+					logger.Info(fmt.Sprintf("Adding annotation to EPG  %s", nsPol))
+					r.ApicClient.AddTagAnnotationToEpg(nsPol, fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Spec.Name, segPolObject.Spec.Name)
+				}
+			}
+		}
+	}
+
+	// Delete EPG or Remove annotations in case the namespaces is no longer included in the Policy definition
+	epgs, err := r.ApicClient.GetEpgWithAnnotation(fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Spec.Name)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	logger.Info(fmt.Sprintf("List of EPGs under Policy %s :  %s", segPolObject.Spec.Name, epgs))
+	for _, epg := range epgs {
+		toDel := true
+		for _, nsPol := range segPolObject.Spec.Namespaces {
+			if epg == nsPol {
+				toDel = false
+			}
+		}
+		if toDel {
+			//TODO: Validate other annotations before deleting EPG
+			logger.Info(fmt.Sprintf("Deleting EPG  %s", epg))
+			err := r.ApicClient.DeleteEndpointGroup(epg, fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), segPolObject.Spec.Tenant)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+	}
+
+	// Create Filters and filter entries based on the policy rules
 	filters := []string{}
 	for _, rule := range segPolObject.Spec.Rules {
 		eth := rule.Eth
@@ -119,8 +157,12 @@ func (r *SegmentationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 		filterName := fmt.Sprintf("%s_%s%s%s", segPolObject.Spec.Name, eth, ip, strconv.Itoa(port))
 		filters = append(filters, filterName)
 		r.ApicClient.CreateFilterAndFilterEntry(segPolObject.Spec.Tenant, filterName, eth, ip, port)
+		logger.Info(fmt.Sprintf("Creating Filter %s", filterName))
 	}
+
+	// Create Contract and Subject and associate the filters
 	r.ApicClient.CreateContract(segPolObject.Spec.Tenant, segPolObject.Spec.Name, filters)
+	logger.Info(fmt.Sprintf("Creating Contract/Subject %s", segPolObject.Spec.Name))
 
 	return ctrl.Result{}, nil
 }
@@ -153,13 +195,14 @@ func (r *SegmentationPolicyReconciler) deleteSegPolicyFinalizerCallback(ctx cont
 		ip := rule.IP
 		port := rule.Port
 		filterName := fmt.Sprintf("%s_%s%s%s", segPolObject.Spec.Name, eth, ip, strconv.Itoa(port))
+		// Delete the Filter objects
 		if err := r.ApicClient.DeleteFilter(segPolObject.Spec.Tenant, filterName); err != nil {
 			return fmt.Errorf("error occurred while deleting filter: %w", err)
 		}
-		if err := r.ApicClient.DeleteContract(segPolObject.Spec.Tenant, segPolObject.Spec.Name); err != nil {
-			return fmt.Errorf("error occurred while deleting contract: %w", err)
-		}
-
+	}
+	// Delete the contract and subject
+	if err := r.ApicClient.DeleteContract(segPolObject.Spec.Tenant, segPolObject.Spec.Name); err != nil {
+		return fmt.Errorf("error occurred while deleting contract: %w", err)
 	}
 	// remove the cleanup-row finalizer from the postgresWriterObject
 	controllerutil.RemoveFinalizer(segPolObject, "finalizers.segmentationpolicies.apic.aci.cisco/delete")

@@ -42,12 +42,23 @@ func (ac *ApicClientMocks) DeleteEndpointGroup(name, appName, tenantName string)
 	return nil
 }
 
+func (ac *ApicClientMocks) EpgExists(name, appName, tenantName string) (bool, error) {
+	return true, nil
+}
+
+func (ac *ApicClientMocks) AddTagAnnotationToEpg(name, appName, tenantName, key, value string) error {
+	return nil
+}
 func (ac *ApicClientMocks) CreateFilterAndFilterEntry(tenantName, name, eth, ip string, port int) error {
 	if !ac.FilterExists(name) {
 		fmt.Printf("Creating Filter %s in Tenant %s\n", name, tenantName)
 		ac.filters = append(ac.filters, name)
 	}
 	return nil
+}
+
+func (ac *ApicClientMocks) GetEpgWithAnnotation(appName, tenantName, key string) ([]string, error) {
+	return []string{}, nil
 }
 
 func (ac *ApicClientMocks) DeleteFilter(tenantName, name string) error {

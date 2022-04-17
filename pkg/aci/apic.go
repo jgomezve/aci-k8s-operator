@@ -28,6 +28,9 @@ type ApicInterface interface {
 	FilterExists(name string) bool
 	CreateContract(tenantName, name string, filters []string) error
 	DeleteContract(tenantName, name string) error
+	EpgExists(name, appName, tenantName string) (bool, error)
+	AddTagAnnotationToEpg(name, appName, tenantName, key, value string) error
+	GetEpgWithAnnotation(appName, tenantName, key string) ([]string, error)
 }
 
 func NewApicClient(host, user, password string) (*ApicClient, error) {
@@ -67,7 +70,6 @@ func (ac *ApicClient) CreateApplicationProfile(name, description, tenantName str
 	if err != nil {
 		return err
 	}
-	err = ac.AddTagAnnotation("owner", "k8s", fvApp.DistinguishedName)
 	if err != nil {
 		return err
 	}
@@ -93,7 +95,6 @@ func (ac *ApicClient) CreateEndpointGroup(name, description, appName, tenantName
 		return err
 	}
 
-	err = ac.AddTagAnnotation("owner", "k8s", fvAEpg.DistinguishedName)
 	if err != nil {
 		return err
 	}
@@ -108,6 +109,47 @@ func (ac *ApicClient) DeleteEndpointGroup(name, appName, tenantName string) erro
 	return nil
 }
 
+func (ac *ApicClient) EpgExists(name, appName, tenantName string) (bool, error) {
+
+	fvAEPgCont, err := ac.client.Get(fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, name))
+	if err != nil {
+		return false, err
+	}
+	fvAEPg := models.ApplicationEPGFromContainer(fvAEPgCont)
+
+	if fvAEPg.DistinguishedName == "" {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func (ac *ApicClient) AddTagAnnotationToEpg(name, appName, tenantName, key, value string) error {
+
+	parentDn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, name)
+	if err := ac.AddTagAnnotation(key, value, parentDn); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ac *ApicClient) GetEpgWithAnnotation(appName, tenantName, key string) ([]string, error) {
+
+	epgs := []string{}
+	epgList, err := ac.client.ListApplicationEPG(appName, tenantName)
+	if err != nil {
+		return []string{}, err
+	}
+
+	for _, epg := range epgList {
+		_, err := ac.client.ReadAnnotation(key, epg.DistinguishedName)
+		if err == nil {
+			epgs = append(epgs, epg.Name)
+		}
+	}
+
+	return epgs, nil
+}
 func (ac *ApicClient) CreateContract(tenantName, name string, filters []string) error {
 	vzBrCPAttr := models.ContractAttributes{}
 	vzBrCPAttr.Name = name

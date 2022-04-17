@@ -8,12 +8,24 @@ spec:
   namespaces:
     - ns1
     - ns2
-    - ns3
   rules:
-    - eth: ip
-      ip: tcp
-      port: 80
     - eth: arp
     - eth: ip
       ip: udp
       port: 53
+---
+apiVersion: apic.aci.cisco/v1alpha1
+kind: SegmentationPolicy
+metadata:
+  name: segmentationpolicy-sample
+spec:
+  name: segpol2
+  tenant: k8s-tenant
+  namespaces:
+    - ns2
+    - ns3
+    - ns4
+  rules:
+    - eth: ip
+      ip: tcp
+      port: 80
