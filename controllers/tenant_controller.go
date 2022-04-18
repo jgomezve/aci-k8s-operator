@@ -32,7 +32,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/jgomezve/aci-operator/api/v1alpha1"
-	apicv1alpha1 "github.com/jgomezve/aci-operator/api/v1alpha1"
 )
 
 // TenantReconciler reconciles a Tenant object
@@ -103,7 +102,7 @@ func (r *TenantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 // SetupWithManager sets up the controller with the Manager.
 func (r *TenantReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&apicv1alpha1.Tenant{}).
+		For(&v1alpha1.Tenant{}).
 		Complete(r)
 }
 

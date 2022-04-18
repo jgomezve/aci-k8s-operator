@@ -36,7 +36,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/jgomezve/aci-operator/api/v1alpha1"
-	apicv1alpha1 "github.com/jgomezve/aci-operator/api/v1alpha1"
 	"github.com/jgomezve/aci-operator/pkg/aci"
 )
 
@@ -170,7 +169,7 @@ func (r *SegmentationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 // SetupWithManager sets up the controller with the Manager.
 func (r *SegmentationPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&apicv1alpha1.SegmentationPolicy{}).
+		For(&v1alpha1.SegmentationPolicy{}).
 		Watches(&source.Kind{Type: &corev1.Namespace{}},
 			handler.EnqueueRequestsFromMapFunc(r.nameSpaceSegPolicyMapFunc)).
 		Complete(r)
