@@ -25,7 +25,7 @@ type ApicInterface interface {
 	CreateFilterAndFilterEntry(tenantName, name, eth, ip string, port int) error
 	DeleteFilter(name, tenantName string) error
 	AddTagAnnotation(key, value, parentDn string) error
-	FilterExists(name string) bool
+	FilterExists(name, tenantName string) (bool, error)
 	CreateContract(tenantName, name string, filters []string) error
 	DeleteContract(tenantName, name string) error
 	EpgExists(name, appName, tenantName string) (bool, error)
@@ -227,6 +227,6 @@ func (ac *ApicClient) AddTagAnnotation(key, value, parentDn string) error {
 	return nil
 }
 
-func (ac *ApicClient) FilterExists(name string) bool {
-	return true
+func (ac *ApicClient) FilterExists(name, tenantName string) (bool, error) {
+	return true, nil
 }

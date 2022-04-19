@@ -31,7 +31,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/jgomezve/aci-operator/api/v1alpha1"
-	apicv1alpha1 "github.com/jgomezve/aci-operator/api/v1alpha1"
 	"github.com/jgomezve/aci-operator/pkg/aci"
 )
 
@@ -106,7 +105,7 @@ func (r *ApplicationProfileReconciler) Reconcile(ctx context.Context, req ctrl.R
 // SetupWithManager sets up the controller with the Manager.
 func (r *ApplicationProfileReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&apicv1alpha1.ApplicationProfile{}).
+		For(&v1alpha1.ApplicationProfile{}).
 		Complete(r)
 }
 
