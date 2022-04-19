@@ -49,7 +49,7 @@ var _ = Describe("Segmentation Policy controller", func() {
 				Name:      SegmentationPolicyName,
 				Namespace: SegmentationPolicyNamespace,
 			},
-			Spec: apicv1alpha1.SegmentationPolicySpec{
+			Spec: v1alpha1.SegmentationPolicySpec{
 				Tenant:     SegmentationPolicyTenant,
 				Namespaces: Namespaces,
 				Rules: []v1alpha1.RuleSpec{
@@ -85,16 +85,11 @@ var _ = Describe("Segmentation Policy controller", func() {
 					return err == nil
 				}, timeout, interval).Should(BeTrue())
 				Expect(createdSegPol.Name).Should(Equal(SegmentationPolicyName))
-
-				for _, rule := range createdSegPol.Spec.Rules {
-					// TODO: Keep the name logic out of the Test. Test using mock-only functions
-					filterName := fmt.Sprintf("%s_%s%s%s", createdSegPol.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
-				Expect(createdSegPol.Spec.Name).Should(Equal(SegmentationPolicyName))
 			})
 			By("Checking created APIC Filters", func() {
 				for _, rule := range segPol.Spec.Rules {
 					// TODO: Keep the name logic out of the Test. Test using mock-only functions
-					filterName := fmt.Sprintf("%s_%s%s%s", segPol.Spec.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
+					filterName := fmt.Sprintf("%s_%s%s%s", segPol.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
 					Eventually(func() bool {
 						exists, _ := apicClient.FilterExists(filterName, segPol.Spec.Tenant)
 						return exists
@@ -124,7 +119,7 @@ var _ = Describe("Segmentation Policy controller", func() {
 			By("Checking deleted APIC filters", func() {
 				for _, rule := range segPol.Spec.Rules {
 					// TODO: Keep the name logic out of the Test. Test using mock-only functions
-					filterName := fmt.Sprintf("%s_%s%s%s", segPol.Spec.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
+					filterName := fmt.Sprintf("%s_%s%s%s", segPol.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
 					Eventually(func() bool {
 						exists, _ := apicClient.FilterExists(filterName, segPol.Spec.Tenant)
 						return exists
