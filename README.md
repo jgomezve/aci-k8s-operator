@@ -1,5 +1,4 @@
 # ACI Kubernetes Operator
-
 [![Tests](https://github.com/jgomezve/aci-k8s-operator/actions/workflows/test.yaml/badge.svg)](https://github.com/jgomezve/aci-k8s-operator/actions/workflows/test.yaml)
 
 ```yaml
