@@ -8,6 +8,7 @@ type endpointGroup struct {
 	name string
 	tnt  string
 	app  string
+	tags map[string]string
 }
 
 type contract struct {
@@ -63,14 +64,14 @@ func (ac *ApicClientMocks) DeleteApplicationProfile(name, tenantName string) err
 func (ac *ApicClientMocks) CreateEndpointGroup(name, description, appName, tenantName string) error {
 	dn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, name)
 	fmt.Printf("Creating EPG %s \n", dn)
-	ac.endpointGroups[dn] = endpointGroup{name: name, app: appName, tnt: tenantName}
+	ac.endpointGroups[dn] = endpointGroup{name: name, app: appName, tnt: tenantName, tags: map[string]string{}}
 	return nil
 }
 
 func (ac *ApicClientMocks) DeleteEndpointGroup(name, appName, tenantName string) error {
 	dn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, name)
-	delete(ac.endpointGroups, dn)
 	fmt.Printf("Deleting EPG %s \n", dn)
+	delete(ac.endpointGroups, dn)
 	return nil
 }
 
@@ -82,10 +83,16 @@ func (ac *ApicClientMocks) EpgExists(name, appName, tenantName string) (bool, er
 }
 
 func (ac *ApicClientMocks) AddTagAnnotationToEpg(name, appName, tenantName, key, value string) error {
+	dn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, name)
+	fmt.Printf("Add Annotation {%s:%s} to EPG %s\n", key, value, dn)
+	ac.endpointGroups[dn].tags[key] = value
 	return nil
 }
 
 func (ac *ApicClientMocks) RemoveTagAnnotation(name, appName, tenantName, key string) error {
+	dn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, name)
+	fmt.Printf("Remove Annotation {%s: x } to EPG %s \n", key, dn)
+	delete(ac.endpointGroups[dn].tags, key)
 	return nil
 }
 
@@ -97,11 +104,26 @@ func (ac *ApicClientMocks) CreateFilterAndFilterEntry(tenantName, name, eth, ip 
 }
 
 func (ac *ApicClientMocks) GetEpgWithAnnotation(appName, tenantName, key string) ([]string, error) {
-	return []string{}, nil
+	fmt.Printf("Getting EPG with tag %s \n", key)
+	epgList := []string{}
+	for _, epg := range ac.endpointGroups {
+		for k, _ := range epg.tags {
+			if k == key {
+				epgList = append(epgList, epg.name)
+			}
+		}
+	}
+	return epgList, nil
 }
 
 func (ac *ApicClientMocks) GetAnnotationsEpg(name, appName, tenantName string) ([]string, error) {
-	return []string{}, nil
+	keys := []string{}
+	dn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, name)
+	fmt.Printf("Getting tags of EPG %s \n", dn)
+	for k, _ := range ac.endpointGroups[dn].tags {
+		keys = append(keys, k)
+	}
+	return keys, nil
 }
 
 func (ac *ApicClientMocks) DeleteFilter(tenantName, name string) error {
@@ -130,4 +152,14 @@ func (ac *ApicClientMocks) DeleteContract(tenantName, name string) error {
 
 func (ac *ApicClientMocks) AddTagAnnotation(key, value, parentDn string) error {
 	return nil
+}
+
+func (ac *ApicClientMocks) AddTagAnnotationToFilter(name, tenantName, key, value string) error {
+
+	return nil
+}
+
+func (ac *ApicClientMocks) GetFilterWithAnnotation(tenantName, key string) ([]string, error) {
+
+	return []string{}, nil
 }

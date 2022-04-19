@@ -159,18 +159,45 @@ func (r *SegmentationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 		}
 	}
 
-	// Create Filters and filter entries based on the policy rules
-	filters := []string{}
+	//Create Filters and filter entries based on the policy rules
+	filtersC := []string{}
 	for _, rule := range segPolObject.Spec.Rules {
-		eth := rule.Eth
-		ip := rule.IP
-		port := rule.Port
-		filterName := fmt.Sprintf("%s_%s%s%s", segPolObject.Name, eth, ip, strconv.Itoa(port))
-		filters = append(filters, filterName)
-		r.ApicClient.CreateFilterAndFilterEntry(segPolObject.Spec.Tenant, filterName, eth, ip, port)
-		logger.Info(fmt.Sprintf("Creating Filter %s", filterName))
+		filterName := fmt.Sprintf("%s_%s%s%s", segPolObject.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
+		logger.Info(fmt.Sprintf("Checking filter %s ", filterName))
+		filtersC = append(filtersC, filterName)
+		exists, err := r.ApicClient.FilterExists(filterName, segPolObject.Spec.Tenant)
+		logger.Info(fmt.Sprintf("Result FilterExists %s:%s ", strconv.FormatBool(exists), err))
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		// Only create a filter if it does not exist already
+		if !exists {
+			logger.Info(fmt.Sprintf("Creating Filter %s", filterName))
+			r.ApicClient.CreateFilterAndFilterEntry(segPolObject.Spec.Tenant, filterName, rule.Eth, rule.IP, rule.Port)
+			logger.Info(fmt.Sprintf("Creating Filter %s", filterName))
+			r.ApicClient.AddTagAnnotationToFilter(filterName, segPolObject.Spec.Tenant, segPolObject.Name, segPolObject.Name)
+		} else {
+			logger.Info(fmt.Sprintf("Filter %s already exists ", filterName))
+		}
 	}
-
+	//Delete filters
+	filters, err := r.ApicClient.GetFilterWithAnnotation(segPolObject.Spec.Tenant, segPolObject.Name)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	logger.Info(fmt.Sprintf("List of Filters under Policy %s :  %s", segPolObject.Name, filters))
+	for _, fltApic := range filters {
+		toDel := true
+		for _, fltK8s := range filtersC {
+			if fltApic == fltK8s {
+				toDel = false
+			}
+		}
+		if toDel {
+			logger.Info(fmt.Sprintf("Deleting Filter %s", fltApic))
+			r.ApicClient.DeleteFilter(segPolObject.Spec.Tenant, fltApic)
+		}
+	}
 	// Create Contract and Subject and associate the filters
 	r.ApicClient.CreateContract(segPolObject.Spec.Tenant, segPolObject.Name, filters)
 	logger.Info(fmt.Sprintf("Creating Contract/Subject %s", segPolObject.Name))

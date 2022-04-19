@@ -127,14 +127,13 @@ var _ = Describe("Segmentation Policy controller", func() {
 				}
 			})
 			By("Checking deleted APIC EPGs", func() {
-				// TODO: Not implemeted Yet
-				// TODO: Keep the name logic out of the Test. Test using mock-only functions
-				// for _, ns := range Namespaces {
-				// 	Eventually(func() bool {
-				// 		exists, _ := apicClient.EpgExists(ns, fmt.Sprintf("Seg_Pol_%s", segPol.Spec.Tenant), segPol.Spec.Tenant)
-				// 		return exists
-				// 	}, timeout, interval).Should(BeFalse())
-				// }
+				//TODO: Keep the name logic out of the Test. Test using mock-only functions
+				for _, ns := range Namespaces {
+					Eventually(func() bool {
+						exists, _ := apicClient.EpgExists(ns, fmt.Sprintf("Seg_Pol_%s", segPol.Spec.Tenant), segPol.Spec.Tenant)
+						return exists
+					}, timeout, interval).Should(BeFalse())
+				}
 			})
 			By("Checking K8s Namespaces are left untouched", func() {
 				namespaces := &corev1.NamespaceList{}

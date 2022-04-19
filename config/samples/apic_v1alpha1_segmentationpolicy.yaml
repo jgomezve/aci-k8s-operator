@@ -26,4 +26,4 @@ spec:
   rules:
     - eth: ip
       ip: tcp
-      port: 80
+      port: 80 

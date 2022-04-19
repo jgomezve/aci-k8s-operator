@@ -24,7 +24,7 @@ type ApicInterface interface {
 	CreateEndpointGroup(name, description, appName, tenantName string) error
 	DeleteEndpointGroup(name, appName, tenantName string) error
 	CreateFilterAndFilterEntry(tenantName, name, eth, ip string, port int) error
-	DeleteFilter(name, tenantName string) error
+	DeleteFilter(tenantName, name string) error
 	AddTagAnnotation(key, value, parentDn string) error
 	FilterExists(name, tenantName string) (bool, error)
 	CreateContract(tenantName, name string, filters []string) error
@@ -34,6 +34,8 @@ type ApicInterface interface {
 	RemoveTagAnnotation(name, appName, tenantName, key string) error
 	GetEpgWithAnnotation(appName, tenantName, key string) ([]string, error)
 	GetAnnotationsEpg(name, appName, tenantName string) ([]string, error)
+	AddTagAnnotationToFilter(name, tenantName, key, value string) error
+	GetFilterWithAnnotation(tenantName, key string) ([]string, error)
 }
 
 func NewApicClient(host, user, password string) (*ApicClient, error) {
@@ -116,6 +118,7 @@ func (ac *ApicClient) EpgExists(name, appName, tenantName string) (bool, error) 
 
 	fvAEPgCont, err := ac.client.Get(fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, name))
 	if err != nil {
+		// TODO: Check when is an actual error
 		return false, err
 	}
 	fvAEPg := models.ApplicationEPGFromContainer(fvAEPgCont)
@@ -259,5 +262,45 @@ func (ac *ApicClient) AddTagAnnotation(key, value, parentDn string) error {
 }
 
 func (ac *ApicClient) FilterExists(name, tenantName string) (bool, error) {
+	fvFilterCont, err := ac.client.Get(fmt.Sprintf("uni/tn-%s/flt-%s", tenantName, name))
+	if err != nil {
+		// TODO: Check when is an actual error
+		return false, nil
+	}
+	fvFilter := models.FilterFromContainer(fvFilterCont)
+
+	if fvFilter.DistinguishedName == "" {
+		return false, nil
+	}
+
 	return true, nil
+}
+
+// Add Annotation (key=value) to the EPG object
+func (ac *ApicClient) AddTagAnnotationToFilter(name, tenantName, key, value string) error {
+
+	parentDn := fmt.Sprintf("uni/tn-%s/flt-%s", tenantName, name)
+	if err := ac.AddTagAnnotation(key, value, parentDn); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Get list of Filters with an annotation with specific key
+func (ac *ApicClient) GetFilterWithAnnotation(tenantName, key string) ([]string, error) {
+
+	filters := []string{}
+	filterList, err := ac.client.ListFilter(tenantName)
+	if err != nil {
+		return []string{}, err
+	}
+
+	for _, flt := range filterList {
+		_, err := ac.client.ReadAnnotation(key, flt.DistinguishedName)
+		if err == nil {
+			filters = append(filters, flt.Name)
+		}
+	}
+
+	return filters, nil
 }
