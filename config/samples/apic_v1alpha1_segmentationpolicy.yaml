@@ -3,7 +3,7 @@ kind: SegmentationPolicy
 metadata:
   name: segpol1
 spec:
-  tenant: k8s-tenant
+  tenant: k8s-operator
   namespaces:
     - ns1
     - ns2
@@ -18,7 +18,7 @@ kind: SegmentationPolicy
 metadata:
   name: segpol2
 spec:
-  tenant: k8s-tenant
+  tenant: k8s-operator
   namespaces:
     - ns2
     - ns3

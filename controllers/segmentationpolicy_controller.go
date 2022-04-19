@@ -100,8 +100,8 @@ func (r *SegmentationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 	r.List(ctx, namespaces)
 
 	// Always create/overwrite the same Application Profile
-	r.ApicClient.CreateApplicationProfile(fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), "", segPolObject.Spec.Tenant)
 	logger.Info(fmt.Sprintf("Creating Application Profile %s", segPolObject.Name))
+	r.ApicClient.CreateApplicationProfile(fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), "", segPolObject.Spec.Tenant)
 
 	// Create EPGs based on the Namespaces listes
 	for _, nsCluster := range namespaces.Items {
