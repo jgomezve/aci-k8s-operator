@@ -110,7 +110,7 @@ var _ = Describe("Segmentation Policy controller", func() {
 		},
 	}
 
-	Context("When creating a new Segmentation Policy", func() {
+	Context("When creating the first Segmentation Policy", func() {
 
 		It("Should create APIC Objects when new Segmentation Policy is created", func() {
 			By("Creating new K8s Namespaces", func() {
@@ -226,7 +226,7 @@ var _ = Describe("Segmentation Policy controller", func() {
 		})
 	})
 
-	Context("Updating a existing Segmentation Policy", func() {
+	Context("Updating an existing Segmentation Policy", func() {
 		It("Should update EPGs and Filters on the APIC", func() {
 			By("Updating an existing Segmentation Policy", func() {
 
@@ -291,7 +291,7 @@ var _ = Describe("Segmentation Policy controller", func() {
 		})
 	})
 
-	Context("Delete", func() {
+	Context("Delete all existing Segmentation Policies", func() {
 		It("Should delete APIC Objects when a Segmentation Policy is deleted", func() {
 			By("Deleting all existing Segmentation Policies", func() {
 				Expect(k8sClient.Delete(ctx, segPol)).Should(Succeed())
