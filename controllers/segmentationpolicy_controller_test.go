@@ -16,6 +16,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strconv"
 	"time"
 
@@ -217,11 +218,14 @@ var _ = Describe("Segmentation Policy controller", func() {
 						exists, _ := apicClient.FilterExists(filterName, segPol.Spec.Tenant)
 						return exists
 					}, timeout, interval).Should(BeTrue())
+
 				}
 			})
 			By("Checking EPG with multiple tags", func() {
 				tags, _ := apicClient.GetAnnotationsEpg("ns-b", fmt.Sprintf("Seg_Pol_%s", segPol.Spec.Tenant), segPol2.Spec.Tenant)
+				sort.Strings(tags)
 				Expect(tags).Should(Equal([]string{"segpol1", "segpol2"}))
+
 			})
 		})
 	})
