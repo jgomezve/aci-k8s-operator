@@ -20,6 +20,7 @@ type contract struct {
 type filter struct {
 	name string
 	tnt  string
+	tags map[string]string
 }
 
 // func (epg endpointGroup) getDn() string {
@@ -99,7 +100,7 @@ func (ac *ApicClientMocks) RemoveTagAnnotation(name, appName, tenantName, key st
 func (ac *ApicClientMocks) CreateFilterAndFilterEntry(tenantName, name, eth, ip string, port int) error {
 	dn := fmt.Sprintf("uni/tn-%s/flt-%s", tenantName, name)
 	fmt.Printf("Creating Filter %s \n", dn)
-	ac.filters[dn] = filter{name: name, tnt: tenantName}
+	ac.filters[dn] = filter{name: name, tnt: tenantName, tags: map[string]string{}}
 	return nil
 }
 
@@ -155,11 +156,21 @@ func (ac *ApicClientMocks) AddTagAnnotation(key, value, parentDn string) error {
 }
 
 func (ac *ApicClientMocks) AddTagAnnotationToFilter(name, tenantName, key, value string) error {
-
+	dn := fmt.Sprintf("uni/tn-%s/flt-%s", tenantName, name)
+	fmt.Printf("Add Annotation {%s:%s} to Filter %s\n", key, value, dn)
+	ac.filters[dn].tags[key] = value
 	return nil
 }
 
 func (ac *ApicClientMocks) GetFilterWithAnnotation(tenantName, key string) ([]string, error) {
-
-	return []string{}, nil
+	fmt.Printf("Getting Filters with tag %s \n", key)
+	filterList := []string{}
+	for _, flt := range ac.filters {
+		for k, _ := range flt.tags {
+			if k == key {
+				filterList = append(filterList, flt.name)
+			}
+		}
+	}
+	return filterList, nil
 }
