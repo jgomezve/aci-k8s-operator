@@ -25,7 +25,6 @@ type ApicInterface interface {
 	DeleteEndpointGroup(name, appName, tenantName string) error
 	CreateFilterAndFilterEntry(tenantName, name, eth, ip string, port int) error
 	DeleteFilter(tenantName, name string) error
-	AddTagAnnotation(key, value, parentDn string) error
 	FilterExists(name, tenantName string) (bool, error)
 	CreateContract(tenantName, name string, filters []string) error
 	DeleteContract(tenantName, name string) error

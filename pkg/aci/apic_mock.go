@@ -23,10 +23,6 @@ type filter struct {
 	tags map[string]string
 }
 
-// func (epg endpointGroup) getDn() string {
-// 	return fmt.Sprintf("uni\tn-%s/ap-%s/epg-%s", epg.tnt, epg.app, epg.name)
-// }
-
 type ApicClientMocks struct {
 	filters        map[string]filter
 	endpointGroups map[string]endpointGroup
@@ -148,10 +144,9 @@ func (ac *ApicClientMocks) CreateContract(tenantName, name string, filters []str
 	return nil
 }
 func (ac *ApicClientMocks) DeleteContract(tenantName, name string) error {
-	return nil
-}
-
-func (ac *ApicClientMocks) AddTagAnnotation(key, value, parentDn string) error {
+	dn := fmt.Sprintf("uni/tn-%s/brp-%s", tenantName, name)
+	fmt.Printf("Deleting Contract %s \n", dn)
+	delete(ac.contracts, dn)
 	return nil
 }
 
