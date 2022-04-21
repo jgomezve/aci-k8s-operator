@@ -176,6 +176,8 @@ var _ = Describe("Segmentation Policy controller", func() {
 		})
 	})
 
+	// For the SegmentationPolicy #2 not all the defined Namespaces exist in the K8s Cluster.
+	// There is also a Namespaces defined in SegmentationPolicy #1 and SegmentationPolicy #2
 	Context("Creating an additional Segmentation Policy", func() {
 
 		It("Should create additional APIC Objects when an additional Segmentation Policy is created", func() {
@@ -238,6 +240,10 @@ var _ = Describe("Segmentation Policy controller", func() {
 		})
 	})
 
+	// The updated version of SegmentationPolicy #2, no longer includes the Namespaces already defined in SegmentationPolicy #
+	// The updated version of SegmentationPolicy #2 no longer defines a K8s Namespaces. The corresponding EPG is deleted
+	// The updated version of SegmentationPolicy #2 defines another K8s Namespaces. A new EPG is created
+	// The updated version of SegmentationPolicy #2 defines a Namespaces that does not exist in K8s. Nothing should happen
 	Context("Updating an existing Segmentation Policy", func() {
 
 		It("Should update EPGs and Filters on the APIC", func() {
