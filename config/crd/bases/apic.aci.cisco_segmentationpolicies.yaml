@@ -36,9 +36,6 @@ spec:
           spec:
             description: SegmentationPolicySpec defines the desired state of SegmentationPolicy
             properties:
-              name:
-                minLength: 0
-                type: string
               namespaces:
                 items:
                   type: string
@@ -55,9 +52,9 @@ spec:
                   type: object
                 type: array
               tenant:
+                minLength: 0
                 type: string
             required:
-            - name
             - namespaces
             - rules
             - tenant

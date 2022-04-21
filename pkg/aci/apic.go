@@ -2,6 +2,7 @@ package aci
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 
 	"github.com/ciscoecosystem/aci-go-client/client"
@@ -23,14 +24,17 @@ type ApicInterface interface {
 	CreateEndpointGroup(name, description, appName, tenantName string) error
 	DeleteEndpointGroup(name, appName, tenantName string) error
 	CreateFilterAndFilterEntry(tenantName, name, eth, ip string, port int) error
-	DeleteFilter(name, tenantName string) error
-	AddTagAnnotation(key, value, parentDn string) error
+	DeleteFilter(tenantName, name string) error
 	FilterExists(name, tenantName string) (bool, error)
 	CreateContract(tenantName, name string, filters []string) error
 	DeleteContract(tenantName, name string) error
 	EpgExists(name, appName, tenantName string) (bool, error)
 	AddTagAnnotationToEpg(name, appName, tenantName, key, value string) error
+	RemoveTagAnnotation(name, appName, tenantName, key string) error
 	GetEpgWithAnnotation(appName, tenantName, key string) ([]string, error)
+	GetAnnotationsEpg(name, appName, tenantName string) ([]string, error)
+	AddTagAnnotationToFilter(name, tenantName, key, value string) error
+	GetFilterWithAnnotation(tenantName, key string) ([]string, error)
 }
 
 func NewApicClient(host, user, password string) (*ApicClient, error) {
@@ -38,7 +42,7 @@ func NewApicClient(host, user, password string) (*ApicClient, error) {
 		host:     host,
 		user:     user,
 		password: password,
-		client:   client.GetClient(fmt.Sprintf("https://%s/", host), user, client.Password(password), client.Insecure(true)),
+		client:   client.GetClient(fmt.Sprintf("https://%s/", host), user, client.Password(password), client.Insecure(true), client.SkipLoggingPayload(true)),
 	}
 	// TODO: Re-use connection
 	return ac, nil
@@ -113,6 +117,7 @@ func (ac *ApicClient) EpgExists(name, appName, tenantName string) (bool, error) 
 
 	fvAEPgCont, err := ac.client.Get(fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, name))
 	if err != nil {
+		// TODO: Check when is an actual error
 		return false, err
 	}
 	fvAEPg := models.ApplicationEPGFromContainer(fvAEPgCont)
@@ -124,6 +129,7 @@ func (ac *ApicClient) EpgExists(name, appName, tenantName string) (bool, error) 
 	return true, nil
 }
 
+// Add Annotation (key=value) to the EPG object
 func (ac *ApicClient) AddTagAnnotationToEpg(name, appName, tenantName, key, value string) error {
 
 	parentDn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, name)
@@ -133,6 +139,16 @@ func (ac *ApicClient) AddTagAnnotationToEpg(name, appName, tenantName, key, valu
 	return nil
 }
 
+// Remove Annotation (key=value) to the EPG object
+func (ac *ApicClient) RemoveTagAnnotation(name, appName, tenantName, key string) error {
+	parentDn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, name)
+	if err := ac.client.DeleteAnnotation(key, parentDn); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Get list of EPG with an annotation with specific key
 func (ac *ApicClient) GetEpgWithAnnotation(appName, tenantName, key string) ([]string, error) {
 
 	epgs := []string{}
@@ -150,6 +166,23 @@ func (ac *ApicClient) GetEpgWithAnnotation(appName, tenantName, key string) ([]s
 
 	return epgs, nil
 }
+
+func (ac *ApicClient) GetAnnotationsEpg(name, appName, tenantName string) ([]string, error) {
+	r, _ := regexp.Compile(fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s/", tenantName, appName, name))
+	annotations := []string{}
+	annotationList, err := ac.client.ListAnnotation()
+	if err != nil {
+		return []string{}, err
+	}
+
+	for _, ann := range annotationList {
+		if r.Match([]byte(ann.DistinguishedName)) {
+			annotations = append(annotations, ann.Key)
+		}
+	}
+	return annotations, nil
+}
+
 func (ac *ApicClient) CreateContract(tenantName, name string, filters []string) error {
 	vzBrCPAttr := models.ContractAttributes{}
 	vzBrCPAttr.Name = name
@@ -228,5 +261,45 @@ func (ac *ApicClient) AddTagAnnotation(key, value, parentDn string) error {
 }
 
 func (ac *ApicClient) FilterExists(name, tenantName string) (bool, error) {
+	fvFilterCont, err := ac.client.Get(fmt.Sprintf("uni/tn-%s/flt-%s", tenantName, name))
+	if err != nil {
+		// TODO: Check when is an actual error
+		return false, nil
+	}
+	fvFilter := models.FilterFromContainer(fvFilterCont)
+
+	if fvFilter.DistinguishedName == "" {
+		return false, nil
+	}
+
 	return true, nil
+}
+
+// Add Annotation (key=value) to the EPG object
+func (ac *ApicClient) AddTagAnnotationToFilter(name, tenantName, key, value string) error {
+
+	parentDn := fmt.Sprintf("uni/tn-%s/flt-%s", tenantName, name)
+	if err := ac.AddTagAnnotation(key, value, parentDn); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Get list of Filters with an annotation with specific key
+func (ac *ApicClient) GetFilterWithAnnotation(tenantName, key string) ([]string, error) {
+
+	filters := []string{}
+	filterList, err := ac.client.ListFilter(tenantName)
+	if err != nil {
+		return []string{}, err
+	}
+
+	for _, flt := range filterList {
+		_, err := ac.client.ReadAnnotation(key, flt.DistinguishedName)
+		if err == nil {
+			filters = append(filters, flt.Name)
+		}
+	}
+
+	return filters, nil
 }

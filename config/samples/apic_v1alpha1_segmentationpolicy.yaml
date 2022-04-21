@@ -1,10 +1,9 @@
 apiVersion: apic.aci.cisco/v1alpha1
 kind: SegmentationPolicy
 metadata:
-  name: segmentationpolicy-sample-1
-spec:
   name: segpol1
-  tenant: k8s-tenant
+spec:
+  tenant: k8s-operator
   namespaces:
     - ns1
     - ns2
@@ -17,10 +16,9 @@ spec:
 apiVersion: apic.aci.cisco/v1alpha1
 kind: SegmentationPolicy
 metadata:
-  name: segmentationpolicy-sample-2
-spec:
   name: segpol2
-  tenant: k8s-tenant
+spec:
+  tenant: k8s-operator
   namespaces:
     - ns2
     - ns3
@@ -28,4 +26,4 @@ spec:
   rules:
     - eth: ip
       ip: tcp
-      port: 80
+      port: 80 

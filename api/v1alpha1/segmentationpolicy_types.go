@@ -29,7 +29,6 @@ type SegmentationPolicySpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	//+kubebuilder:validation:MinLength=0
-	Name       string     `json:"name"`
 	Tenant     string     `json:"tenant"`
 	Namespaces []string   `json:"namespaces"`
 	Rules      []RuleSpec `json:"rules"`
