@@ -28,9 +28,12 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+// Segmentation Policy DOES NOT manage/own K8s Namespaces.
+// It creates the corresponding ACI Objects if the defined Namespace exists.
+// It deletes the corresponding ACI Object if a linked Namespaces is removed
+
 var _ = Describe("Segmentation Policy controller", func() {
 	const (
-		SegmentationPolicyName      = "segpol1"
 		SegmentationPolicyNamespace = "default"
 		SegmentationPolicyTenant    = "k8s-tenant"
 		timeout                     = time.Second * 10
@@ -38,20 +41,23 @@ var _ = Describe("Segmentation Policy controller", func() {
 		interval                    = time.Millisecond * 250
 	)
 
-	Namespaces := []string{"ns-a", "ns-b"}
 	ctx := context.Background()
-	segPol := &v1alpha1.SegmentationPolicy{
+
+	// Namespaces of SegmentationPolicy #1
+	nsSegPol1 := []string{"ns-a", "ns-b"}
+	// SegmentationPolicy #1
+	segPol1 := &v1alpha1.SegmentationPolicy{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apic.aci.cisco/v1alpha1",
 			Kind:       "SegmentationPolicy",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      SegmentationPolicyName,
+			Name:      "segpol1",
 			Namespace: SegmentationPolicyNamespace,
 		},
 		Spec: v1alpha1.SegmentationPolicySpec{
 			Tenant:     SegmentationPolicyTenant,
-			Namespaces: Namespaces,
+			Namespaces: nsSegPol1,
 			Rules: []v1alpha1.RuleSpec{
 				{
 					Eth:  "ip",
@@ -61,6 +67,12 @@ var _ = Describe("Segmentation Policy controller", func() {
 			},
 		},
 	}
+
+	// Namespaces of SegmentationPolicy #2
+	nsSegPol2 := []string{"ns-b", "ns-c", "ns-d"}
+	// Namespaces created in  K8s before creating SegmentationPolicy #2
+	nsK8sSegPol2 := []string{"ns-c", "ns-d", "ns-f"}
+	// SegmentationPolicy #2
 	segPol2 := &v1alpha1.SegmentationPolicy{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apic.aci.cisco/v1alpha1",
@@ -72,7 +84,7 @@ var _ = Describe("Segmentation Policy controller", func() {
 		},
 		Spec: v1alpha1.SegmentationPolicySpec{
 			Tenant:     "k8s-tenant",
-			Namespaces: []string{"ns-b", "ns-c", "ns-d"},
+			Namespaces: nsSegPol2,
 			Rules: []v1alpha1.RuleSpec{
 				{
 					Eth:  "ip",
@@ -86,6 +98,8 @@ var _ = Describe("Segmentation Policy controller", func() {
 			},
 		},
 	}
+
+	// SegmentationPolicy #2 (Updated)
 	segPol2_1 := &v1alpha1.SegmentationPolicy{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apic.aci.cisco/v1alpha1",
@@ -111,12 +125,14 @@ var _ = Describe("Segmentation Policy controller", func() {
 		},
 	}
 
+	// For the SegmentationPolicy #1 all the defined Namespaces already exist in the K8s cluster
 	Context("When creating the first Segmentation Policy", func() {
 
 		It("Should create APIC Objects when new Segmentation Policy is created", func() {
+			// Create in the K8s Cluster the Namespaces specified in the Segmentation Policy
 			By("Creating new K8s Namespaces", func() {
-				for _, ns := range Namespaces {
-					ns_a := &corev1.Namespace{
+				for _, ns := range nsSegPol1 {
+					newNs := &corev1.Namespace{
 						TypeMeta: metav1.TypeMeta{
 							APIVersion: "v1",
 							Kind:       "Namespace",
@@ -125,34 +141,34 @@ var _ = Describe("Segmentation Policy controller", func() {
 							Name: ns,
 						},
 					}
-					Expect(k8sClient.Create(ctx, ns_a)).Should(Succeed())
+					Expect(k8sClient.Create(ctx, newNs)).Should(Succeed())
 				}
 			})
 			By("Creating a new K8s Segmentation Policy", func() {
-				Expect(k8sClient.Create(ctx, segPol)).Should(Succeed())
-				segPolLookupKey := types.NamespacedName{Name: SegmentationPolicyName, Namespace: SegmentationPolicyNamespace}
+				// Create SegmentationPolicy #1
+				Expect(k8sClient.Create(ctx, segPol1)).Should(Succeed())
+				// Verify the SegmentationPolicy #1 is created in K8s
+				segPolLookupKey := types.NamespacedName{Name: segPol1.Name, Namespace: SegmentationPolicyNamespace}
 				createdSegPol := &v1alpha1.SegmentationPolicy{}
 				Eventually(func() bool {
 					err := k8sClient.Get(ctx, segPolLookupKey, createdSegPol)
 					return err == nil
 				}, timeout, interval).Should(BeTrue())
-				Expect(createdSegPol.Name).Should(Equal(SegmentationPolicyName))
+				Expect(createdSegPol.Name).Should(Equal(segPol1.Name))
 			})
-			By("Checking created APIC Filters", func() {
-				for _, rule := range segPol.Spec.Rules {
-					// TODO: Keep the name logic out of the Test. Test using mock-only functions
-					filterName := fmt.Sprintf("%s_%s%s%s", segPol.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
+			By("Checking the created APIC Filters", func() {
+				for _, rule := range segPol1.Spec.Rules {
+					filterName := fmt.Sprintf("%s_%s%s%s", segPol1.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
 					Eventually(func() bool {
-						exists, _ := apicClient.FilterExists(filterName, segPol.Spec.Tenant)
+						exists, _ := apicClient.FilterExists(filterName, segPol1.Spec.Tenant)
 						return exists
 					}, timeout, interval).Should(BeTrue())
 				}
 			})
 			By("Checking created APIC EPGs", func() {
-				// TODO: Keep the name logic out of the Test. Test using mock-only functions
-				for _, ns := range Namespaces {
+				for _, ns := range segPol1.Spec.Namespaces {
 					Eventually(func() bool {
-						exists, _ := apicClient.EpgExists(ns, fmt.Sprintf("Seg_Pol_%s", segPol.Spec.Tenant), segPol.Spec.Tenant)
+						exists, _ := apicClient.EpgExists(ns, fmt.Sprintf("Seg_Pol_%s", segPol1.Spec.Tenant), segPol1.Spec.Tenant)
 						return exists
 					}, timeout, interval).Should(BeTrue())
 				}
@@ -161,10 +177,12 @@ var _ = Describe("Segmentation Policy controller", func() {
 	})
 
 	Context("Creating an additional Segmentation Policy", func() {
+
 		It("Should create additional APIC Objects when an additional Segmentation Policy is created", func() {
+			// Create in the K8s Cluster additional Namespaces. The new Namespaces do not match the ones stated in the Segmentation Policy #2
 			By("Creating additional K8s Namespacse", func() {
-				for _, ns := range []string{"ns-c", "ns-d", "ns-f"} {
-					ns := &corev1.Namespace{
+				for _, ns := range nsK8sSegPol2 {
+					newNs := &corev1.Namespace{
 						TypeMeta: metav1.TypeMeta{
 							APIVersion: "v1",
 							Kind:       "Namespace",
@@ -173,13 +191,14 @@ var _ = Describe("Segmentation Policy controller", func() {
 							Name: ns,
 						},
 					}
-					Expect(k8sClient.Create(ctx, ns)).Should(Succeed())
+					Expect(k8sClient.Create(ctx, newNs)).Should(Succeed())
 				}
 			})
 			By("Creating the additional Segmentation Policies", func() {
-
+				// Create SegmentationPolicy #2
 				Expect(k8sClient.Create(ctx, segPol2)).Should(Succeed())
-				segPolLookupKey := types.NamespacedName{Name: "segpol2", Namespace: "default"}
+				// Verify the SegmentationPolicy #1 is created in K8s
+				segPolLookupKey := types.NamespacedName{Name: segPol2.Name, Namespace: SegmentationPolicyNamespace}
 				createdSegPol := &v1alpha1.SegmentationPolicy{}
 				Eventually(func() bool {
 					err := k8sClient.Get(ctx, segPolLookupKey, createdSegPol)
@@ -188,41 +207,30 @@ var _ = Describe("Segmentation Policy controller", func() {
 				Expect(createdSegPol.Name).Should(Equal("segpol2"))
 			})
 			By("Checking created APIC EPGs for both Segmentation Policies", func() {
-				// TODO: Keep the name logic out of the Test. Test using mock-only functions
-				for _, ns := range segPol.Spec.Namespaces {
-					Eventually(func() bool {
-						exists, _ := apicClient.EpgExists(ns, fmt.Sprintf("Seg_Pol_%s", segPol.Spec.Tenant), segPol.Spec.Tenant)
-						return exists
-					}, timeout, interval).Should(BeTrue())
-				}
-				for _, ns := range segPol2.Spec.Namespaces {
-					Eventually(func() bool {
-						exists, _ := apicClient.EpgExists(ns, fmt.Sprintf("Seg_Pol_%s", segPol2.Spec.Tenant), segPol2.Spec.Tenant)
-						return exists
-					}, timeout, interval).Should(BeTrue())
+
+				for _, segPol := range []v1alpha1.SegmentationPolicy{*segPol1, *segPol2} {
+					for _, ns := range segPol.Spec.Namespaces {
+						Eventually(func() bool {
+							exists, _ := apicClient.EpgExists(ns, fmt.Sprintf("Seg_Pol_%s", segPol.Spec.Tenant), segPol.Spec.Tenant)
+							return exists
+						}, timeout, interval).Should(BeTrue())
+					}
 				}
 			})
 			By("Checking created APIC Filters for both Segmentation Policies", func() {
-				for _, rule := range segPol.Spec.Rules {
-					// TODO: Keep the name logic out of the Test. Test using mock-only functions
-					filterName := fmt.Sprintf("%s_%s%s%s", segPol.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
-					Eventually(func() bool {
-						exists, _ := apicClient.FilterExists(filterName, segPol.Spec.Tenant)
-						return exists
-					}, timeout, interval).Should(BeTrue())
-				}
-				for _, rule := range segPol2.Spec.Rules {
-					// TODO: Keep the name logic out of the Test. Test using mock-only functions
-					filterName := fmt.Sprintf("%s_%s%s%s", segPol2.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
-					Eventually(func() bool {
-						exists, _ := apicClient.FilterExists(filterName, segPol.Spec.Tenant)
-						return exists
-					}, timeout, interval).Should(BeTrue())
-
+				for _, segPol := range []v1alpha1.SegmentationPolicy{*segPol1, *segPol2} {
+					for _, rule := range segPol.Spec.Rules {
+						filterName := fmt.Sprintf("%s_%s%s%s", segPol.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
+						Eventually(func() bool {
+							exists, _ := apicClient.FilterExists(filterName, segPol.Spec.Tenant)
+							return exists
+						}, timeout, interval).Should(BeTrue())
+					}
 				}
 			})
+			// Namespaces defined in both Segmentation Policies should have two Tag Annotation. One per Segmentation Policy
 			By("Checking EPG with multiple tags", func() {
-				tags, _ := apicClient.GetAnnotationsEpg("ns-b", fmt.Sprintf("Seg_Pol_%s", segPol.Spec.Tenant), segPol2.Spec.Tenant)
+				tags, _ := apicClient.GetAnnotationsEpg("ns-b", fmt.Sprintf("Seg_Pol_%s", segPol1.Spec.Tenant), segPol2.Spec.Tenant)
 				sort.Strings(tags)
 				Expect(tags).Should(Equal([]string{"segpol1", "segpol2"}))
 
@@ -231,28 +239,28 @@ var _ = Describe("Segmentation Policy controller", func() {
 	})
 
 	Context("Updating an existing Segmentation Policy", func() {
-		It("Should update EPGs and Filters on the APIC", func() {
-			By("Updating an existing Segmentation Policy", func() {
 
-				segPolLookupKey := types.NamespacedName{Name: "segpol2", Namespace: "default"}
+		It("Should update EPGs and Filters on the APIC", func() {
+			// Update SegmentationPolicy #2.
+			By("Updating an existing Segmentation Policy", func() {
+				segPolLookupKey := types.NamespacedName{Name: segPol2.Name, Namespace: "default"}
 				queriedObj := &v1alpha1.SegmentationPolicy{}
 				Eventually(func() bool {
 					err := k8sClient.Get(ctx, segPolLookupKey, queriedObj)
 					return err == nil
 				}, timeout, interval).Should(BeTrue())
-				// First Query the Object to ge the current Resource Version
+				// First query the SegmentationPolicy to get the current Resource Version
 				segPol2_1.ObjectMeta.ResourceVersion = queriedObj.ObjectMeta.ResourceVersion
-				// Update the Object with the new configuration
+				// Update the SegmentationPolicy with the new configuration
 				Expect(k8sClient.Update(ctx, segPol2_1)).Should(Succeed())
-				// Check the Object still exists
+				// Check the SegmentationPolicy still exists
 				createdSegPol := &v1alpha1.SegmentationPolicy{}
 				Eventually(func() bool {
 					err := k8sClient.Get(ctx, segPolLookupKey, createdSegPol)
 					return err == nil
 				}, timeout, interval).Should(BeTrue())
-				Expect(createdSegPol.Name).Should(Equal("segpol2"))
+				Expect(createdSegPol.Name).Should(Equal(segPol2.Name))
 			})
-
 			By("Checking a EPG has been deleted", func() {
 				Eventually(func() bool {
 					exists, _ := apicClient.EpgExists("ns-d", fmt.Sprintf("Seg_Pol_%s", segPol2.Spec.Tenant), segPol2.Spec.Tenant)
@@ -260,33 +268,33 @@ var _ = Describe("Segmentation Policy controller", func() {
 				}, timeout, interval).Should(BeFalse())
 			})
 			By("Checking a Tag has been removed from an EPG", func() {
-				tags, _ := apicClient.GetAnnotationsEpg("ns-b", fmt.Sprintf("Seg_Pol_%s", segPol.Spec.Tenant), segPol2.Spec.Tenant)
-				Expect(tags).Should(Equal([]string{"segpol1"}))
+				tags, _ := apicClient.GetAnnotationsEpg("ns-b", fmt.Sprintf("Seg_Pol_%s", segPol1.Spec.Tenant), segPol2.Spec.Tenant)
+				Expect(tags).Should(Equal([]string{segPol1.Name}))
 			})
 			By("Checking a Filter has been Deleted", func() {
-				filterName := fmt.Sprintf("%s_%s%s%s", segPol.Name, "ip", "icmp", "0")
+				filterName := fmt.Sprintf("%s_%s%s%s", segPol1.Name, "ip", "icmp", "0")
 				Eventually(func() bool {
-					exists, _ := apicClient.FilterExists(filterName, segPol.Spec.Tenant)
+					exists, _ := apicClient.FilterExists(filterName, segPol1.Spec.Tenant)
 					return exists
 				}, timeout, interval).Should(BeFalse())
 			})
 			By("Checking all the APIC Filters exits", func() {
 				for _, rule := range segPol2_1.Spec.Rules {
-					// TODO: Keep the name logic out of the Test. Test using mock-only functions
 					filterName := fmt.Sprintf("%s_%s%s%s", segPol2_1.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
 					Eventually(func() bool {
-						exists, _ := apicClient.FilterExists(filterName, segPol.Spec.Tenant)
+						exists, _ := apicClient.FilterExists(filterName, segPol1.Spec.Tenant)
 						return exists
 					}, timeout, interval).Should(BeTrue())
 				}
 			})
+			// TODO. Calculate dynamically the affected K8s Namespaces by comparing the list Namespaces in the Segmentation Policies
 			By("Checking a new EPG exist", func() {
 				Eventually(func() bool {
 					exists, _ := apicClient.EpgExists("ns-f", fmt.Sprintf("Seg_Pol_%s", segPol2.Spec.Tenant), segPol2.Spec.Tenant)
 					return exists
 				}, timeout, interval).Should(BeTrue())
 			})
-			By("Checking a EPG was created", func() {
+			By("Checking a EPG was not created", func() {
 				Eventually(func() bool {
 					exists, _ := apicClient.EpgExists("ns-e", fmt.Sprintf("Seg_Pol_%s", segPol2.Spec.Tenant), segPol2.Spec.Tenant)
 					return exists
@@ -296,62 +304,48 @@ var _ = Describe("Segmentation Policy controller", func() {
 	})
 
 	Context("Delete all existing Segmentation Policies", func() {
-		It("Should delete APIC Objects when a Segmentation Policy is deleted", func() {
-			By("Deleting all existing Segmentation Policies", func() {
-				Expect(k8sClient.Delete(ctx, segPol)).Should(Succeed())
-				segPolLookupKey := types.NamespacedName{Name: "segpol1", Namespace: "default"}
-				createdSegPol := &v1alpha1.SegmentationPolicy{}
-				Eventually(func() bool {
-					err := k8sClient.Get(ctx, segPolLookupKey, createdSegPol)
-					return err == nil
-				}, timeout, interval).Should(BeFalse())
 
-				Expect(k8sClient.Delete(ctx, segPol2_1)).Should(Succeed())
-				segPolLookupKey = types.NamespacedName{Name: "segpol2", Namespace: "default"}
-				createdSegPol = &v1alpha1.SegmentationPolicy{}
-				Eventually(func() bool {
-					err := k8sClient.Get(ctx, segPolLookupKey, createdSegPol)
-					return err == nil
-				}, timeout, interval).Should(BeFalse())
-			})
-			By("Checking deleted APIC filters", func() {
-				for _, rule := range segPol.Spec.Rules {
-					// TODO: Keep the name logic out of the Test. Test using mock-only functions
-					filterName := fmt.Sprintf("%s_%s%s%s", segPol.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
+		It("Should delete APIC Objects when a Segmentation Policy is deleted", func() {
+			// Delete SegmentationPolicy #1 and SegmentationPolicy #2.
+			By("Deleting all existing Segmentation Policies", func() {
+				Expect(k8sClient.Delete(ctx, segPol1)).Should(Succeed())
+				Expect(k8sClient.Delete(ctx, segPol2)).Should(Succeed())
+				for _, segPol := range []v1alpha1.SegmentationPolicy{*segPol1, *segPol2} {
+					segPolLookupKey := types.NamespacedName{Name: segPol.Name, Namespace: "default"}
+					createdSegPol := &v1alpha1.SegmentationPolicy{}
 					Eventually(func() bool {
-						exists, _ := apicClient.FilterExists(filterName, segPol.Spec.Tenant)
-						return exists
+						err := k8sClient.Get(ctx, segPolLookupKey, createdSegPol)
+						return err == nil
 					}, timeout, interval).Should(BeFalse())
 				}
-				for _, rule := range segPol2_1.Spec.Rules {
-					// TODO: Keep the name logic out of the Test. Test using mock-only functions
-					filterName := fmt.Sprintf("%s_%s%s%s", segPol2_1.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
-					Eventually(func() bool {
-						exists, _ := apicClient.FilterExists(filterName, segPol2_1.Spec.Tenant)
-						return exists
-					}, timeout, interval).Should(BeFalse())
+			})
+			By("Checking deleted APIC filters", func() {
+				for _, segPol := range []v1alpha1.SegmentationPolicy{*segPol1, *segPol2} {
+					for _, rule := range segPol.Spec.Rules {
+						filterName := fmt.Sprintf("%s_%s%s%s", segPol.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
+						Eventually(func() bool {
+							exists, _ := apicClient.FilterExists(filterName, segPol.Spec.Tenant)
+							return exists
+						}, timeout, interval).Should(BeFalse())
+					}
 				}
 			})
 			By("Checking deleted APIC EPGs", func() {
-				//TODO: Keep the name logic out of the Test. Test using mock-only functions
-				for _, ns := range segPol.Spec.Namespaces {
-					Eventually(func() bool {
-						exists, _ := apicClient.EpgExists(ns, fmt.Sprintf("Seg_Pol_%s", segPol.Spec.Tenant), segPol.Spec.Tenant)
-						return exists
-					}, timeout, interval).Should(BeFalse())
-				}
-				for _, ns := range segPol2_1.Spec.Namespaces {
-					Eventually(func() bool {
-						exists, _ := apicClient.EpgExists(ns, fmt.Sprintf("Seg_Pol_%s", segPol2_1.Spec.Tenant), segPol2_1.Spec.Tenant)
-						return exists
-					}, timeout, interval).Should(BeFalse())
+				for _, segPol := range []v1alpha1.SegmentationPolicy{*segPol1, *segPol2} {
+					for _, ns := range segPol.Spec.Namespaces {
+						Eventually(func() bool {
+							exists, _ := apicClient.EpgExists(ns, fmt.Sprintf("Seg_Pol_%s", segPol.Spec.Tenant), segPol.Spec.Tenant)
+							return exists
+						}, timeout, interval).Should(BeFalse())
+					}
 				}
 			})
 			By("Checking K8s Namespaces are left untouched", func() {
 				namespaces := &corev1.NamespaceList{}
 				k8sClient.List(ctx, namespaces)
 				var found bool
-				for _, nsManifest := range Namespaces {
+				// Not all the Namespaces defined in th Segmentation Policy #2 are actually configured in K8s
+				for _, nsManifest := range append(nsSegPol1, nsK8sSegPol2...) {
 					found = false
 					for _, nsK8s := range namespaces.Items {
 						if nsManifest == nsK8s.Name {
