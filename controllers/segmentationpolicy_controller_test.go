@@ -240,7 +240,7 @@ var _ = Describe("Segmentation Policy controller", func() {
 		})
 	})
 
-	// The updated version of SegmentationPolicy #2, no longer includes the Namespaces already defined in SegmentationPolicy #
+	// The updated version of SegmentationPolicy #2 no longer includes the Namespaces already defined in SegmentationPolicy #
 	// The updated version of SegmentationPolicy #2 no longer defines a K8s Namespaces. The corresponding EPG is deleted
 	// The updated version of SegmentationPolicy #2 defines another K8s Namespaces. A new EPG is created
 	// The updated version of SegmentationPolicy #2 defines a Namespaces that does not exist in K8s. Nothing should happen
