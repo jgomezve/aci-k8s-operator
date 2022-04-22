@@ -35,7 +35,7 @@ jobs:
         id: go
 
       - name: Cache go mod
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/.cache/go-build
