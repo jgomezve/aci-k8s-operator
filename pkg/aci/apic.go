@@ -9,6 +9,7 @@ import (
 	"github.com/ciscoecosystem/aci-go-client/client"
 	"github.com/ciscoecosystem/aci-go-client/models"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/jgomezve/aci-operator/pkg/utils"
 )
 
 type ApicClient struct {
@@ -275,7 +276,7 @@ func (ac *ApicClient) GetContractFilters(contractName, tenantName string) ([]str
 		return []string{}, err
 	}
 	filtersName := []string{}
-	for _, flt := range toStringList(filters.(*schema.Set).List()) {
+	for _, flt := range utils.ToStringList(filters.(*schema.Set).List()) {
 		r, _ := regexp.Compile("/flt-[a-zA-Z0-9_]*")
 		fltName := r.FindString(flt)
 		filtersName = append(filtersName, strings.Replace(fltName, "/flt-", "", -1))

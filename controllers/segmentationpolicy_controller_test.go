@@ -173,7 +173,7 @@ var _ = Describe("Segmentation Policy controller", func() {
 					}, timeout, interval).Should(BeTrue())
 				}
 			})
-			By("Checking consumed/proived APIC EPG contracts", func() {
+			By("Checking contracts consumed/provided by EPG", func() {
 				for _, ns := range segPol1.Spec.Namespaces {
 					contracts, _ := apicClient.GetContracts(ns, fmt.Sprintf("Seg_Pol_%s", segPol1.Spec.Tenant), segPol1.Spec.Tenant)
 					Expect(contracts["consumed"]).Should(Equal([]string{segPol1.Name}))
@@ -244,6 +244,11 @@ var _ = Describe("Segmentation Policy controller", func() {
 				Expect(tags).Should(Equal([]string{"segpol1", "segpol2"}))
 
 			})
+			By("Checking EPG providing and consuming multiple contracts", func() {
+				contracts, _ := apicClient.GetContracts("ns-b", fmt.Sprintf("Seg_Pol_%s", segPol1.Spec.Tenant), segPol1.Spec.Tenant)
+				Expect(contracts["consumed"]).Should(Equal([]string{segPol1.Name, segPol2.Name}))
+				Expect(contracts["provided"]).Should(Equal([]string{segPol1.Name, segPol2.Name}))
+			})
 		})
 	})
 
@@ -283,6 +288,11 @@ var _ = Describe("Segmentation Policy controller", func() {
 			By("Checking a Tag has been removed from an EPG", func() {
 				tags, _ := apicClient.GetAnnotationsEpg("ns-b", fmt.Sprintf("Seg_Pol_%s", segPol1.Spec.Tenant), segPol2.Spec.Tenant)
 				Expect(tags).Should(Equal([]string{segPol1.Name}))
+			})
+			By("Checking EPG no longer consumes a Contract", func() {
+				contracts, _ := apicClient.GetContracts("ns-b", fmt.Sprintf("Seg_Pol_%s", segPol1.Spec.Tenant), segPol1.Spec.Tenant)
+				Expect(contracts["consumed"]).Should(Equal([]string{segPol1.Name}))
+				Expect(contracts["provided"]).Should(Equal([]string{segPol1.Name}))
 			})
 			By("Checking a Filter has been Deleted", func() {
 				filterName := fmt.Sprintf("%s_%s%s%s", segPol1.Name, "ip", "icmp", "0")

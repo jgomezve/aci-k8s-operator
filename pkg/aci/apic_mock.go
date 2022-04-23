@@ -2,6 +2,8 @@ package aci
 
 import (
 	"fmt"
+
+	"github.com/jgomezve/aci-operator/pkg/utils"
 )
 
 type endpointGroup struct {
@@ -84,7 +86,9 @@ func (ac *ApicClientMocks) EpgExists(name, appName, tenantName string) (bool, er
 func (ac *ApicClientMocks) ConsumeContract(epgName, appName, tenantName, conName string) error {
 	dn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, epgName)
 	fmt.Printf("EPG %s consuming contract %s\n", dn, conName)
-	ac.endpointGroups[dn].contracts["consumed"] = append(ac.endpointGroups[dn].contracts["consumed"], conName)
+	if !utils.Contains(ac.endpointGroups[dn].contracts["consumed"], conName) {
+		ac.endpointGroups[dn].contracts["consumed"] = append(ac.endpointGroups[dn].contracts["consumed"], conName)
+	}
 	return nil
 }
 
@@ -92,7 +96,9 @@ func (ac *ApicClientMocks) ConsumeContract(epgName, appName, tenantName, conName
 func (ac *ApicClientMocks) ProvideContract(epgName, appName, tenantName, conName string) error {
 	dn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, epgName)
 	fmt.Printf("EPG %s providing contract %s\n", dn, conName)
-	ac.endpointGroups[dn].contracts["provided"] = append(ac.endpointGroups[dn].contracts["provided"], conName)
+	if !utils.Contains(ac.endpointGroups[dn].contracts["provided"], conName) {
+		ac.endpointGroups[dn].contracts["provided"] = append(ac.endpointGroups[dn].contracts["provided"], conName)
+	}
 	return nil
 }
 
@@ -102,10 +108,16 @@ func (ac *ApicClientMocks) GetContracts(epgName, appName, tenantName string) (ma
 }
 
 func (ac *ApicClientMocks) DeleteContractConsumer(epgName, appName, tenantName, conName string) error {
+	dn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, epgName)
+	fmt.Printf("EPG %s no longer consuming contract %s\n", dn, conName)
+	ac.endpointGroups[dn].contracts["consumed"] = utils.Remove(ac.endpointGroups[dn].contracts["consumed"], conName)
 	return nil
 }
 
 func (ac *ApicClientMocks) DeleteContractProvider(epgName, appName, tenantName, conName string) error {
+	dn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, epgName)
+	fmt.Printf("EPG %s no longer providing contract %s\n", dn, conName)
+	ac.endpointGroups[dn].contracts["provided"] = utils.Remove(ac.endpointGroups[dn].contracts["provided"], conName)
 	return nil
 }
 
