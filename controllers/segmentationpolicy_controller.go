@@ -146,13 +146,28 @@ func (r *SegmentationPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 }
 
 func (r *SegmentationPolicyReconciler) nameSpaceSegPolicyMapFunc(object client.Object) []reconcile.Request {
-	//ns := object.(*corev1.Namespace)
+	modifiedNs := object.(*corev1.Namespace)
+	logger := log.FromContext(context.TODO())
+	logger.Info("Namespace  %s modified", modifiedNs.Name)
 
-	//fmt.Printf("Namespace %s modified\n", ns.Name)
-
-	// requests := make([]reconcile.Request, 1)
-	// requests[0] = reconcile.Request{NamespacedName: types.NamespacedName{Namespace: "testNs", Name: "testName"}}
-	return []reconcile.Request{}
+	currentSegmentationPolicies := &v1alpha1.SegmentationPolicyList{}
+	err := r.List(context.TODO(), currentSegmentationPolicies)
+	if err != nil {
+		return []reconcile.Request{}
+	}
+	requests := []reconcile.Request{}
+	for _, pol := range currentSegmentationPolicies.Items {
+		for _, ns := range pol.Spec.Namespaces {
+			if ns == modifiedNs.Name {
+				requests = append(requests, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Name: pol.Name,
+					},
+				})
+			}
+		}
+	}
+	return requests
 }
 
 func (r *SegmentationPolicyReconciler) deleteSegPolicyFinalizerCallback(ctx context.Context, logger logr.Logger, segPolObject *v1alpha1.SegmentationPolicy) error {
