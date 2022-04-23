@@ -5,10 +5,11 @@ import (
 )
 
 type endpointGroup struct {
-	name string
-	tnt  string
-	app  string
-	tags map[string]string
+	name      string
+	tnt       string
+	app       string
+	tags      map[string]string
+	contracts map[string][]string
 }
 
 type contract struct {
@@ -61,7 +62,7 @@ func (ac *ApicClientMocks) DeleteApplicationProfile(name, tenantName string) err
 func (ac *ApicClientMocks) CreateEndpointGroup(name, description, appName, tenantName string) error {
 	dn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, name)
 	fmt.Printf("Creating EPG %s \n", dn)
-	ac.endpointGroups[dn] = endpointGroup{name: name, app: appName, tnt: tenantName, tags: map[string]string{}}
+	ac.endpointGroups[dn] = endpointGroup{name: name, app: appName, tnt: tenantName, tags: map[string]string{}, contracts: map[string][]string{}}
 	return nil
 }
 
@@ -81,12 +82,23 @@ func (ac *ApicClientMocks) EpgExists(name, appName, tenantName string) (bool, er
 
 // Contract in the same tenant
 func (ac *ApicClientMocks) ConsumeContract(epgName, appName, tenantName, conName string) error {
+	dn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, epgName)
+	fmt.Printf("EPG %s consuming contract %s\n", dn, conName)
+	ac.endpointGroups[dn].contracts["consumed"] = append(ac.endpointGroups[dn].contracts["consumed"], conName)
 	return nil
 }
 
 // Contract in the same tenant
 func (ac *ApicClientMocks) ProvideContract(epgName, appName, tenantName, conName string) error {
+	dn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, epgName)
+	fmt.Printf("EPG %s providing contract %s\n", dn, conName)
+	ac.endpointGroups[dn].contracts["provided"] = append(ac.endpointGroups[dn].contracts["provided"], conName)
 	return nil
+}
+
+func (ac *ApicClientMocks) GetContracts(epgName, appName, tenantName string) (map[string][]string, error) {
+	dn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, epgName)
+	return ac.endpointGroups[dn].contracts, nil
 }
 
 func (ac *ApicClientMocks) DeleteContractConsumer(epgName, appName, tenantName, conName string) error {

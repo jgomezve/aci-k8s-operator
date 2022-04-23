@@ -43,6 +43,7 @@ type ApicInterface interface {
 	DeleteContractProvider(epgName, appName, tenantName, conName string) error
 	GetContractFilters(contractName, tenantName string) ([]string, error)
 	DeleteFilterFromSubjectContract(subjectName, tenantName, filter string) error
+	GetContracts(epgName, appName, tenantName string) (map[string][]string, error)
 }
 
 func NewApicClient(host, user, password string) (*ApicClient, error) {
@@ -224,6 +225,10 @@ func (ac *ApicClient) ProvideContract(epgName, appName, tenantName, conName stri
 		return err
 	}
 	return nil
+}
+
+func (ac *ApicClient) GetContracts(epgName, appName, tenantName string) (map[string][]string, error) {
+	return map[string][]string{}, nil
 }
 
 func (ac *ApicClient) DeleteContractConsumer(epgName, appName, tenantName, conName string) error {

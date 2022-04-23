@@ -173,6 +173,13 @@ var _ = Describe("Segmentation Policy controller", func() {
 					}, timeout, interval).Should(BeTrue())
 				}
 			})
+			By("Checking consumed/proived APIC EPG contracts", func() {
+				for _, ns := range segPol1.Spec.Namespaces {
+					contracts, _ := apicClient.GetContracts(ns, fmt.Sprintf("Seg_Pol_%s", segPol1.Spec.Tenant), segPol1.Spec.Tenant)
+					Expect(contracts["consumed"]).Should(Equal([]string{segPol1.Name}))
+					Expect(contracts["provided"]).Should(Equal([]string{segPol1.Name}))
+				}
+			})
 		})
 	})
 
