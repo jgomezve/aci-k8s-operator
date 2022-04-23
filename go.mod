@@ -5,6 +5,7 @@ go 1.17
 require (
 	github.com/ciscoecosystem/aci-go-client v1.33.0
 	github.com/go-logr/logr v1.2.3
+	github.com/hashicorp/terraform-plugin-sdk/v2 v2.4.3
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.19.0
 	k8s.io/api v0.23.5
@@ -44,7 +45,6 @@ require (
 	github.com/hashicorp/go-version v1.2.1 // indirect
 	github.com/hashicorp/hcl/v2 v2.3.0 // indirect
 	github.com/hashicorp/terraform-plugin-go v0.2.1 // indirect
-	github.com/hashicorp/terraform-plugin-sdk/v2 v2.4.3 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
