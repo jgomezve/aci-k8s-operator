@@ -182,7 +182,21 @@ func (ac *ApicClientMocks) FilterExists(name, tenantName string) (bool, error) {
 func (ac *ApicClientMocks) CreateContract(tenantName, name string, filters []string) error {
 	dn := fmt.Sprintf("uni/tn-%s/brp-%s", tenantName, name)
 	fmt.Printf("Creating contract %s\n", dn)
-	ac.contracts[dn] = contract{name: name, tnt: tenantName, filters: filters}
+	_, exists := ac.contracts[dn]
+	// If the contracts exists, then append new filters
+	if !exists {
+		ac.contracts[dn] = contract{name: name, tnt: tenantName, filters: filters}
+	} else {
+		fmt.Printf("Contract %s already exists\n", dn)
+		for _, flt := range filters {
+			if !utils.Contains(ac.contracts[dn].filters, flt) {
+				currentFilters := ac.contracts[dn].filters
+				currentFilters = append(currentFilters, flt)
+				fmt.Printf("Adding filter %s to contract %s\n", flt, dn)
+				ac.contracts[dn] = contract{name: name, tnt: tenantName, filters: currentFilters}
+			}
+		}
+	}
 	return nil
 }
 
@@ -195,7 +209,7 @@ func (ac *ApicClientMocks) DeleteFilterFromSubjectContract(subjectName, tenantNa
 	dn := fmt.Sprintf("uni/tn-%s/brp-%s", tenantName, subjectName)
 	fmt.Printf("Deleting filter %s from contract %s", filter, subjectName)
 	ftls := ac.contracts[dn].filters
-	ac.contracts[dn] = contract{name: subjectName, tnt: tenantName, filters: ftls}
+	ac.contracts[dn] = contract{name: subjectName, tnt: tenantName, filters: utils.Remove(ftls, filter)}
 	return nil
 }
 func (ac *ApicClientMocks) DeleteContract(tenantName, name string) error {
