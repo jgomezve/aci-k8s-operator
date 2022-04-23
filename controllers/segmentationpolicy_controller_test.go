@@ -44,7 +44,7 @@ var _ = Describe("Segmentation Policy controller", func() {
 	ctx := context.Background()
 
 	// Namespaces of SegmentationPolicy #1
-	nsSegPol1 := []string{"ns-a", "ns-b"}
+	nsSegPol1 := []string{"ns-a", "ns-b", "ns-c"}
 	// SegmentationPolicy #1
 	segPol1 := &v1alpha1.SegmentationPolicy{
 		TypeMeta: metav1.TypeMeta{
@@ -71,7 +71,7 @@ var _ = Describe("Segmentation Policy controller", func() {
 	// Namespaces of SegmentationPolicy #2
 	nsSegPol2 := []string{"ns-b", "ns-c", "ns-d"}
 	// Namespaces created in  K8s before creating SegmentationPolicy #2
-	nsK8sSegPol2 := []string{"ns-c", "ns-d", "ns-f"}
+	nsK8sSegPol2 := []string{"ns-d", "ns-f"}
 	// SegmentationPolicy #2
 	segPol2 := &v1alpha1.SegmentationPolicy{
 		TypeMeta: metav1.TypeMeta{
@@ -340,21 +340,61 @@ var _ = Describe("Segmentation Policy controller", func() {
 		})
 	})
 
-	Context("Delete all existing Segmentation Policies", func() {
-
-		It("Should delete APIC Objects when a Segmentation Policy is deleted", func() {
-			// Delete SegmentationPolicy #1 and SegmentationPolicy #2.
-			By("Deleting all existing Segmentation Policies", func() {
+	// Delete SegmentationPolicy #1
+	Context("Delete a Segmentation Policy", func() {
+		It("Should delete contracts and update EPGs", func() {
+			By("Deleting  a Segmentation Policy", func() {
 				Expect(k8sClient.Delete(ctx, segPol1)).Should(Succeed())
-				Expect(k8sClient.Delete(ctx, segPol2)).Should(Succeed())
-				for _, segPol := range []v1alpha1.SegmentationPolicy{*segPol1, *segPol2} {
-					segPolLookupKey := types.NamespacedName{Name: segPol.Name, Namespace: "default"}
-					createdSegPol := &v1alpha1.SegmentationPolicy{}
+				segPolLookupKey := types.NamespacedName{Name: segPol1.Name, Namespace: "default"}
+				createdSegPol := &v1alpha1.SegmentationPolicy{}
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, segPolLookupKey, createdSegPol)
+					return err == nil
+				}, timeout, interval).Should(BeFalse())
+			})
+			By("Checking deleted APIC filters", func() {
+				for _, rule := range segPol1.Spec.Rules {
+					filterName := fmt.Sprintf("%s_%s%s%s", segPol1.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
 					Eventually(func() bool {
-						err := k8sClient.Get(ctx, segPolLookupKey, createdSegPol)
-						return err == nil
+						exists, _ := apicClient.FilterExists(filterName, segPol1.Spec.Tenant)
+						return exists
 					}, timeout, interval).Should(BeFalse())
 				}
+			})
+			By("Checking that EPGs only managed by that SegmentationPolicy are deleted", func() {
+				for _, ns := range []string{"ns-a", "ns-b"} {
+					Eventually(func() bool {
+						exists, _ := apicClient.EpgExists(ns, fmt.Sprintf("Seg_Pol_%s", segPol1.Spec.Tenant), segPol1.Spec.Tenant)
+						return exists
+					}, timeout, interval).Should(BeFalse())
+				}
+			})
+			By("Checking that EPGs managed by other SegmentationPolicy are not deleted", func() {
+				Eventually(func() bool {
+					exists, _ := apicClient.EpgExists("ns-c", fmt.Sprintf("Seg_Pol_%s", segPol1.Spec.Tenant), segPol1.Spec.Tenant)
+					return exists
+				}, timeout, interval).Should(BeTrue())
+			})
+			By("Checking that EPG only consumes contract associated with SegmentationPolcy 1", func() {
+				contracts, _ := apicClient.GetContracts("ns-c", fmt.Sprintf("Seg_Pol_%s", segPol1.Spec.Tenant), segPol1.Spec.Tenant)
+				Expect(contracts["consumed"]).Should(Equal([]string{segPol2.Name}))
+				Expect(contracts["provided"]).Should(Equal([]string{segPol2.Name}))
+			})
+		})
+	})
+	Context("Delete remaining Segmentation Policy", func() {
+
+		It("Should delete APIC Objects when a Segmentation Policy is deleted", func() {
+			// DeleteSegmentationPolicy #2.
+			By("Deleting remaining Segmentation Policies", func() {
+				Expect(k8sClient.Delete(ctx, segPol2)).Should(Succeed())
+
+				segPolLookupKey := types.NamespacedName{Name: segPol2.Name, Namespace: "default"}
+				createdSegPol := &v1alpha1.SegmentationPolicy{}
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, segPolLookupKey, createdSegPol)
+					return err == nil
+				}, timeout, interval).Should(BeFalse())
 			})
 			By("Checking deleted APIC filters", func() {
 				for _, segPol := range []v1alpha1.SegmentationPolicy{*segPol1, *segPol2} {
