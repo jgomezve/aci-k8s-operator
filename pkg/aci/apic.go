@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/ciscoecosystem/aci-go-client/client"
 	"github.com/ciscoecosystem/aci-go-client/models"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 type ApicClient struct {
@@ -35,6 +37,12 @@ type ApicInterface interface {
 	GetAnnotationsEpg(name, appName, tenantName string) ([]string, error)
 	AddTagAnnotationToFilter(name, tenantName, key, value string) error
 	GetFilterWithAnnotation(tenantName, key string) ([]string, error)
+	ConsumeContract(epgName, appName, tenantName, conName string) error
+	ProvideContract(epgName, appName, tenantName, conName string) error
+	DeleteContractConsumer(epgName, appName, tenantName, conName string) error
+	DeleteContractProvider(epgName, appName, tenantName, conName string) error
+	GetContractFilters(contractName, tenantName string) ([]string, error)
+	DeleteFilterFromSubjectContract(subjectName, tenantName, filter string) error
 }
 
 func NewApicClient(host, user, password string) (*ApicClient, error) {
@@ -183,6 +191,49 @@ func (ac *ApicClient) GetAnnotationsEpg(name, appName, tenantName string) ([]str
 	return annotations, nil
 }
 
+// Contract in the same tenant
+func (ac *ApicClient) ConsumeContract(epgName, appName, tenantName, conName string) error {
+
+	fvRsConsAtt := models.ContractConsumerAttributes{}
+	fvRsConsAtt.TnVzBrCPName = conName
+	//fvRsConsAtt.TDn = fmt.Sprintf("uni/tn-%s/brc-%s", tenantName, conName)
+
+	epgDn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, epgName)
+
+	fvRsCons := models.NewContractConsumer(fmt.Sprintf("rscons-%s", conName), epgDn, fvRsConsAtt)
+	err := ac.client.Save(fvRsCons)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Contract in the same tenant
+func (ac *ApicClient) ProvideContract(epgName, appName, tenantName, conName string) error {
+
+	fvRsProvAtt := models.ContractProviderAttributes{}
+	fvRsProvAtt.TnVzBrCPName = conName
+	//fvRsProvAtt.TDn = fmt.Sprintf("uni/tn-%s/brc-%s", tenantName, conName)
+
+	epgDn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, epgName)
+
+	fvRsCons := models.NewContractProvider(fmt.Sprintf("rsprov-%s", conName), epgDn, fvRsProvAtt)
+	err := ac.client.Save(fvRsCons)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ac *ApicClient) DeleteContractConsumer(epgName, appName, tenantName, conName string) error {
+	return ac.client.DeleteContractConsumer(conName, epgName, appName, tenantName)
+}
+
+func (ac *ApicClient) DeleteContractProvider(epgName, appName, tenantName, conName string) error {
+	return ac.client.DeleteContractProvider(conName, epgName, appName, tenantName)
+}
+
 func (ac *ApicClient) CreateContract(tenantName, name string, filters []string) error {
 	vzBrCPAttr := models.ContractAttributes{}
 	vzBrCPAttr.Name = name
@@ -209,6 +260,28 @@ func (ac *ApicClient) CreateContract(tenantName, name string, filters []string) 
 		}
 	}
 	return nil
+}
+
+func (ac *ApicClient) GetContractFilters(contractName, tenantName string) ([]string, error) {
+	dn := fmt.Sprintf("uni/tn-%s/brc-%s/subj-%s", tenantName, contractName, contractName)
+
+	filters, err := ac.client.ReadRelationvzRsSubjFiltAttFromContractSubject(dn)
+	if err != nil {
+		return []string{}, err
+	}
+	filtersName := []string{}
+	for _, flt := range toStringList(filters.(*schema.Set).List()) {
+		r, _ := regexp.Compile("/flt-[a-zA-Z0-9_]*")
+		fltName := r.FindString(flt)
+		filtersName = append(filtersName, strings.Replace(fltName, "/flt-", "", -1))
+	}
+
+	return filtersName, nil
+}
+
+func (ac *ApicClient) DeleteFilterFromSubjectContract(subjectName, tenantName, filter string) error {
+	dn := fmt.Sprintf("uni/tn-%s/brc-%s/subj-%s", tenantName, subjectName, subjectName)
+	return ac.client.DeleteRelationvzRsSubjFiltAttFromContractSubject(dn, filter)
 }
 
 func (ac *ApicClient) DeleteContract(tenantName, name string) error {

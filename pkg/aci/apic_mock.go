@@ -79,6 +79,24 @@ func (ac *ApicClientMocks) EpgExists(name, appName, tenantName string) (bool, er
 	return exists, nil
 }
 
+// Contract in the same tenant
+func (ac *ApicClientMocks) ConsumeContract(epgName, appName, tenantName, conName string) error {
+	return nil
+}
+
+// Contract in the same tenant
+func (ac *ApicClientMocks) ProvideContract(epgName, appName, tenantName, conName string) error {
+	return nil
+}
+
+func (ac *ApicClientMocks) DeleteContractConsumer(epgName, appName, tenantName, conName string) error {
+	return nil
+}
+
+func (ac *ApicClientMocks) DeleteContractProvider(epgName, appName, tenantName, conName string) error {
+	return nil
+}
+
 func (ac *ApicClientMocks) AddTagAnnotationToEpg(name, appName, tenantName, key, value string) error {
 	dn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, name)
 	fmt.Printf("Add Annotation {%s:%s} to EPG %s\n", key, value, dn)
@@ -141,6 +159,14 @@ func (ac *ApicClientMocks) CreateContract(tenantName, name string, filters []str
 	dn := fmt.Sprintf("uni/tn-%s/brp-%s", tenantName, name)
 	fmt.Printf("Creating contract %s\n", dn)
 	ac.contracts[dn] = contract{name: name, tnt: tenantName, filters: filters}
+	return nil
+}
+
+func (ac *ApicClientMocks) GetContractFilters(contractName, tenantName string) ([]string, error) {
+	return []string{}, nil
+}
+
+func (ac *ApicClientMocks) DeleteFilterFromSubjectContract(subjectName, tenantName, filter string) error {
 	return nil
 }
 func (ac *ApicClientMocks) DeleteContract(tenantName, name string) error {

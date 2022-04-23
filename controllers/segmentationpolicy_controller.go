@@ -96,6 +96,112 @@ func (r *SegmentationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, nil
 	}
 
+	// TODO: Check Result
+	// Reconcile K8s SegmentationPolicies' Namespaces and APIC EPGs
+	_, err = r.ReconcileNamespacesEpgs(ctx, logger, segPolObject)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Create Contract and Subject and associate the filters
+	filters := []string{}
+	for _, rule := range segPolObject.Spec.Rules {
+		filterName := fmt.Sprintf("%s_%s%s%s", segPolObject.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
+		filters = append(filters, filterName)
+	}
+	r.ApicClient.CreateContract(segPolObject.Spec.Tenant, segPolObject.Name, filters)
+	logger.Info(fmt.Sprintf("Creating Contract/Subject %s", segPolObject.Name))
+
+	apicFilters, _ := r.ApicClient.GetContractFilters(segPolObject.Name, segPolObject.Spec.Tenant)
+	logger.Info(fmt.Sprintf("Contract Filters %s", apicFilters))
+
+	for _, apicFlt := range apicFilters {
+		found := false
+		for _, specFlt := range filters {
+			if specFlt == apicFlt {
+				found = true
+			}
+		}
+		if !found {
+			r.ApicClient.DeleteFilterFromSubjectContract(segPolObject.Name, segPolObject.Spec.Tenant, apicFlt)
+		}
+	}
+
+	// Reconcile K8s SegmentationPolicies' Rules and APIC Filters
+	_, err = r.ReconcileRulesFilters(logger, segPolObject)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{}, nil
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *SegmentationPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&v1alpha1.SegmentationPolicy{}).
+		Watches(&source.Kind{Type: &corev1.Namespace{}},
+			handler.EnqueueRequestsFromMapFunc(r.nameSpaceSegPolicyMapFunc)).
+		Complete(r)
+}
+
+func (r *SegmentationPolicyReconciler) nameSpaceSegPolicyMapFunc(object client.Object) []reconcile.Request {
+	//ns := object.(*corev1.Namespace)
+
+	//fmt.Printf("Namespace %s modified\n", ns.Name)
+
+	// requests := make([]reconcile.Request, 1)
+	// requests[0] = reconcile.Request{NamespacedName: types.NamespacedName{Namespace: "testNs", Name: "testName"}}
+	return []reconcile.Request{}
+}
+
+func (r *SegmentationPolicyReconciler) deleteSegPolicyFinalizerCallback(ctx context.Context, logger logr.Logger, segPolObject *v1alpha1.SegmentationPolicy) error {
+
+	for _, rule := range segPolObject.Spec.Rules {
+		filterName := fmt.Sprintf("%s_%s%s%s", segPolObject.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
+		// Delete the Filter objects
+		if err := r.ApicClient.DeleteFilter(segPolObject.Spec.Tenant, filterName); err != nil {
+			return fmt.Errorf("error occurred while deleting filter: %w", err)
+		}
+	}
+	// Delete the contract and subject
+	if err := r.ApicClient.DeleteContract(segPolObject.Spec.Tenant, segPolObject.Name); err != nil {
+		return fmt.Errorf("error occurred while deleting contract: %w", err)
+	}
+
+	// Delete Annotation or EPGs
+	for _, nsPol := range segPolObject.Spec.Namespaces {
+		logger.Info(fmt.Sprintf("EPG must be updated %s", nsPol))
+		annotations, err := r.ApicClient.GetAnnotationsEpg(nsPol, fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), segPolObject.Spec.Tenant)
+		logger.Info(fmt.Sprintf("Annotations configured on EPG %s : %s", nsPol, annotations))
+		if err != nil {
+			return err
+		}
+		if len(annotations) == 1 && annotations[0] == segPolObject.Name {
+			logger.Info(fmt.Sprintf("Deleting EPG  %s", nsPol))
+			if err := r.ApicClient.DeleteEndpointGroup(nsPol, fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), segPolObject.Spec.Tenant); err != nil {
+				return err
+			}
+		} else if len(annotations) > 1 {
+			logger.Info(fmt.Sprintf("Removing annotation %s from EPG %s", segPolObject.Name, nsPol))
+			if err := r.ApicClient.RemoveTagAnnotation(nsPol, fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name); err != nil {
+				return err
+			}
+			r.ApicClient.DeleteContractConsumer(nsPol, fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name)
+			r.ApicClient.DeleteContractProvider(nsPol, fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name)
+		}
+	}
+
+	// remove the cleanup-row finalizer from the postgresWriterObject
+	controllerutil.RemoveFinalizer(segPolObject, "finalizers.segmentationpolicies.apic.aci.cisco/delete")
+	if err := r.Update(ctx, segPolObject); err != nil {
+		return fmt.Errorf("error occurred while removing the finalizer: %w", err)
+	}
+	logger.Info("cleaned up the 'finalizers.segmentationpolicies.apic.aci.cisco/delete' finalizer successfully")
+	return nil
+}
+
+func (r *SegmentationPolicyReconciler) ReconcileNamespacesEpgs(ctx context.Context, logger logr.Logger, segPolObject *v1alpha1.SegmentationPolicy) (ctrl.Result, error) {
 	namespaces := &corev1.NamespaceList{}
 	r.List(ctx, namespaces)
 
@@ -113,6 +219,9 @@ func (r *SegmentationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 				if exists {
 					logger.Info(fmt.Sprintf("Adding annotation to EPG  %s", nsPol))
 					r.ApicClient.AddTagAnnotationToEpg(nsPol, fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name, segPolObject.Name)
+					// Always consume/provide contracts
+					r.ApicClient.ConsumeContract(nsPol, fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name)
+					r.ApicClient.ProvideContract(nsPol, fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name)
 					// If not, create the EPG and add annotation
 				} else {
 					logger.Info(fmt.Sprintf("Creating EPG for Namespace %s", nsPol))
@@ -154,11 +263,15 @@ func (r *SegmentationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 				if err := r.ApicClient.RemoveTagAnnotation(epg, fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name); err != nil {
 					return ctrl.Result{}, err
 				}
-
+				r.ApicClient.DeleteContractConsumer(epg, fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name)
+				r.ApicClient.DeleteContractProvider(epg, fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name)
 			}
 		}
 	}
+	return ctrl.Result{}, nil
+}
 
+func (r *SegmentationPolicyReconciler) ReconcileRulesFilters(logger logr.Logger, segPolObject *v1alpha1.SegmentationPolicy) (ctrl.Result, error) {
 	//Create Filters and filter entries based on the policy rules
 	filtersC := []string{}
 	for _, rule := range segPolObject.Spec.Rules {
@@ -198,78 +311,5 @@ func (r *SegmentationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 			r.ApicClient.DeleteFilter(segPolObject.Spec.Tenant, fltApic)
 		}
 	}
-	// Create Contract and Subject and associate the filters
-	r.ApicClient.CreateContract(segPolObject.Spec.Tenant, segPolObject.Name, filters)
-	logger.Info(fmt.Sprintf("Creating Contract/Subject %s", segPolObject.Name))
-
 	return ctrl.Result{}, nil
-}
-
-// SetupWithManager sets up the controller with the Manager.
-func (r *SegmentationPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha1.SegmentationPolicy{}).
-		Watches(&source.Kind{Type: &corev1.Namespace{}},
-			handler.EnqueueRequestsFromMapFunc(r.nameSpaceSegPolicyMapFunc)).
-		Complete(r)
-}
-
-func (r *SegmentationPolicyReconciler) nameSpaceSegPolicyMapFunc(object client.Object) []reconcile.Request {
-	//ns := object.(*corev1.Namespace)
-
-	//fmt.Printf("Namespace %s modified\n", ns.Name)
-
-	// requests := make([]reconcile.Request, 1)
-	// requests[0] = reconcile.Request{NamespacedName: types.NamespacedName{Namespace: "testNs", Name: "testName"}}
-	return []reconcile.Request{}
-}
-
-func (r *SegmentationPolicyReconciler) deleteSegPolicyFinalizerCallback(ctx context.Context, logger logr.Logger, segPolObject *v1alpha1.SegmentationPolicy) error {
-
-	// delete the row with the above 'id' from the above 'table'
-
-	for _, rule := range segPolObject.Spec.Rules {
-		eth := rule.Eth
-		ip := rule.IP
-		port := rule.Port
-		filterName := fmt.Sprintf("%s_%s%s%s", segPolObject.Name, eth, ip, strconv.Itoa(port))
-		// Delete the Filter objects
-		if err := r.ApicClient.DeleteFilter(segPolObject.Spec.Tenant, filterName); err != nil {
-			return fmt.Errorf("error occurred while deleting filter: %w", err)
-		}
-	}
-	// Delete the contract and subject
-	if err := r.ApicClient.DeleteContract(segPolObject.Spec.Tenant, segPolObject.Name); err != nil {
-		return fmt.Errorf("error occurred while deleting contract: %w", err)
-	}
-
-	// Delete Annotation or EPGs
-	for _, nsPol := range segPolObject.Spec.Namespaces {
-		logger.Info(fmt.Sprintf("EPG must be updated %s", nsPol))
-		annotations, err := r.ApicClient.GetAnnotationsEpg(nsPol, fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), segPolObject.Spec.Tenant)
-		logger.Info(fmt.Sprintf("Annotations configured on EPG %s : %s", nsPol, annotations))
-		if err != nil {
-			return err
-		}
-		if len(annotations) == 1 && annotations[0] == segPolObject.Name {
-			logger.Info(fmt.Sprintf("Deleting EPG  %s", nsPol))
-			if err := r.ApicClient.DeleteEndpointGroup(nsPol, fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), segPolObject.Spec.Tenant); err != nil {
-				return err
-			}
-		} else if len(annotations) > 1 {
-			logger.Info(fmt.Sprintf("Removing annotation %s from EPG %s", segPolObject.Name, nsPol))
-			if err := r.ApicClient.RemoveTagAnnotation(nsPol, fmt.Sprintf("Seg_Pol_%s", segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name); err != nil {
-				return err
-			}
-
-		}
-	}
-
-	// remove the cleanup-row finalizer from the postgresWriterObject
-	controllerutil.RemoveFinalizer(segPolObject, "finalizers.segmentationpolicies.apic.aci.cisco/delete")
-	if err := r.Update(ctx, segPolObject); err != nil {
-		return fmt.Errorf("error occurred while removing the finalizer: %w", err)
-	}
-	logger.Info("cleaned up the 'finalizers.segmentationpolicies.apic.aci.cisco/delete' finalizer successfully")
-	return nil
 }
