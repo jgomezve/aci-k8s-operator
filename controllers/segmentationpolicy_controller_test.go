@@ -156,14 +156,18 @@ var _ = Describe("Segmentation Policy controller", func() {
 				}, timeout, interval).Should(BeTrue())
 				Expect(createdSegPol.Name).Should(Equal(segPol1.Name))
 			})
-			By("Checking the created APIC Filters", func() {
+			By("Checking Contracts and filters in the APIC", func() {
+				filters := []string{}
 				for _, rule := range segPol1.Spec.Rules {
 					filterName := fmt.Sprintf("%s_%s%s%s", segPol1.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
+					filters = append(filters, filterName)
 					Eventually(func() bool {
 						exists, _ := apicClient.FilterExists(filterName, segPol1.Spec.Tenant)
 						return exists
 					}, timeout, interval).Should(BeTrue())
 				}
+				apicFilters, _ := apicClient.GetContractFilters(segPol1.Name, segPol1.Spec.Tenant)
+				Expect(apicFilters).Should(Equal(filters))
 			})
 			By("Checking created APIC EPGs", func() {
 				for _, ns := range segPol1.Spec.Namespaces {
@@ -228,13 +232,17 @@ var _ = Describe("Segmentation Policy controller", func() {
 			})
 			By("Checking created APIC Filters for both Segmentation Policies", func() {
 				for _, segPol := range []v1alpha1.SegmentationPolicy{*segPol1, *segPol2} {
+					filters := []string{}
 					for _, rule := range segPol.Spec.Rules {
 						filterName := fmt.Sprintf("%s_%s%s%s", segPol.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
+						filters = append(filters, filterName)
 						Eventually(func() bool {
 							exists, _ := apicClient.FilterExists(filterName, segPol.Spec.Tenant)
 							return exists
 						}, timeout, interval).Should(BeTrue())
 					}
+					apicFilters, _ := apicClient.GetContractFilters(segPol.Name, segPol.Spec.Tenant)
+					Expect(apicFilters).Should(Equal(filters))
 				}
 			})
 			// Namespaces defined in both Segmentation Policies should have two Tag Annotation. One per Segmentation Policy
@@ -302,13 +310,17 @@ var _ = Describe("Segmentation Policy controller", func() {
 				}, timeout, interval).Should(BeFalse())
 			})
 			By("Checking all the APIC Filters exits", func() {
+				filters := []string{}
 				for _, rule := range segPol2_1.Spec.Rules {
 					filterName := fmt.Sprintf("%s_%s%s%s", segPol2_1.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
+					filters = append(filters, filterName)
 					Eventually(func() bool {
 						exists, _ := apicClient.FilterExists(filterName, segPol1.Spec.Tenant)
 						return exists
 					}, timeout, interval).Should(BeTrue())
 				}
+				apicFilters, _ := apicClient.GetContractFilters(segPol2_1.Name, segPol1.Spec.Tenant)
+				Expect(apicFilters).Should(Equal(filters))
 			})
 			// TODO. Calculate dynamically the affected K8s Namespaces by comparing the list Namespaces in the Segmentation Policies
 			By("Checking a new EPG exist", func() {

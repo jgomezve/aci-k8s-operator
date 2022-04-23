@@ -187,10 +187,15 @@ func (ac *ApicClientMocks) CreateContract(tenantName, name string, filters []str
 }
 
 func (ac *ApicClientMocks) GetContractFilters(contractName, tenantName string) ([]string, error) {
-	return []string{}, nil
+	dn := fmt.Sprintf("uni/tn-%s/brp-%s", tenantName, contractName)
+	return ac.contracts[dn].filters, nil
 }
 
 func (ac *ApicClientMocks) DeleteFilterFromSubjectContract(subjectName, tenantName, filter string) error {
+	dn := fmt.Sprintf("uni/tn-%s/brp-%s", tenantName, subjectName)
+	fmt.Printf("Deleting filter %s from contract %s", filter, subjectName)
+	ftls := ac.contracts[dn].filters
+	ac.contracts[dn] = contract{name: subjectName, tnt: tenantName, filters: ftls}
 	return nil
 }
 func (ac *ApicClientMocks) DeleteContract(tenantName, name string) error {
