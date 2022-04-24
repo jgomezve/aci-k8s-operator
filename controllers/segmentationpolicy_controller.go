@@ -150,6 +150,7 @@ func (r *SegmentationPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		Complete(r)
 }
 
+// Generate SegmentationPolicy request based on changes in the K8s Namespaces
 func (r *SegmentationPolicyReconciler) nameSpaceSegPolicyMapFunc(object client.Object) []reconcile.Request {
 	modifiedNs := object.(*corev1.Namespace)
 	// logger := log.FromContext(context.TODO())
@@ -178,8 +179,10 @@ func (r *SegmentationPolicyReconciler) nameSpaceSegPolicyMapFunc(object client.O
 	return requests
 }
 
+// Remove the APIC objects associated with a SegmentationPolicy
 func (r *SegmentationPolicyReconciler) deleteSegPolicyFinalizerCallback(ctx context.Context, logger logr.Logger, segPolObject *v1alpha1.SegmentationPolicy) error {
 
+	// Delete all the filters defined in the SegmenationPolicy
 	for _, rule := range segPolObject.Spec.Rules {
 		filterName := fmt.Sprintf("%s_%s%s%s", segPolObject.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
 		// Delete the Filter objects
@@ -192,24 +195,20 @@ func (r *SegmentationPolicyReconciler) deleteSegPolicyFinalizerCallback(ctx cont
 		return fmt.Errorf("error occurred while deleting contract: %w", err)
 	}
 
-	// Delete Annotation or EPGs
+	// Check the EPGs associated with the SegmentationPolicy
 	for _, nsPol := range segPolObject.Spec.Namespaces {
 		logger.Info(fmt.Sprintf("EPG must be updated %s", nsPol))
-		annotations, err := r.ApicClient.GetAnnotationsEpg(nsPol, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant)
+		// Read the Annotation created on the EPG to check with SegmentationPolicies 'mananage' the EPG
+		annotations, _ := r.ApicClient.GetAnnotationsEpg(nsPol, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant)
 		logger.Info(fmt.Sprintf("Annotations configured on EPG %s : %s", nsPol, annotations))
-		if err != nil {
-			return err
-		}
+		// If the EPG only has one annotation (and the annotation that corresponds to the SegmenationPolicy), then delete the EPG
 		if len(annotations) == 1 && annotations[0] == segPolObject.Name {
 			logger.Info(fmt.Sprintf("Deleting EPG  %s", nsPol))
-			if err := r.ApicClient.DeleteEndpointGroup(nsPol, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant); err != nil {
-				return err
-			}
+			r.ApicClient.DeleteEndpointGroup(nsPol, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant)
+			// If the EPG has more annotations, then remove the annotation that corresponds to the SegmentationPolicy, and stop consuming/providind the SegmentationPolicy's contract
 		} else if len(annotations) > 1 {
 			logger.Info(fmt.Sprintf("Removing annotation %s from EPG %s", segPolObject.Name, nsPol))
-			if err := r.ApicClient.RemoveTagAnnotation(nsPol, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name); err != nil {
-				return err
-			}
+			r.ApicClient.RemoveTagAnnotation(nsPol, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name)
 			r.ApicClient.DeleteContractConsumer(nsPol, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name)
 			r.ApicClient.DeleteContractProvider(nsPol, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name)
 		}
@@ -264,7 +263,7 @@ func (r *SegmentationPolicyReconciler) ReconcileNamespacesEpgs(ctx context.Conte
 		logger.Info(fmt.Sprintf("EPG must be updated %s", epg))
 		annotations, _ := r.ApicClient.GetAnnotationsEpg(epg, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant)
 		logger.Info(fmt.Sprintf("Annotations configured on EPG %s : %s", epg, annotations))
-		// If the EPG only has one annotation (and the annotation that corresponds to the SegmenationPolicy), the delete the EPG
+		// If the EPG only has one annotation (and the annotation that corresponds to the SegmenationPolicy), then delete the EPG
 		if len(annotations) == 1 && annotations[0] == segPolObject.Name {
 			logger.Info(fmt.Sprintf("Deleting EPG  %s", epg))
 			r.ApicClient.DeleteEndpointGroup(epg, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant)
@@ -279,45 +278,31 @@ func (r *SegmentationPolicyReconciler) ReconcileNamespacesEpgs(ctx context.Conte
 	return ctrl.Result{}, nil
 }
 
+// Reconcile the filters on the APIC based on the rules defined in the SegmentationPolicy
 func (r *SegmentationPolicyReconciler) ReconcileRulesFilters(logger logr.Logger, segPolObject *v1alpha1.SegmentationPolicy) (ctrl.Result, error) {
 	//Create Filters and filter entries based on the policy rules
-	filtersC := []string{}
+	filtersSegPol := []string{}
+
+	// Create Filters for those rules listed in the SegmentationPolicy
 	for _, rule := range segPolObject.Spec.Rules {
 		filterName := fmt.Sprintf("%s_%s%s%s", segPolObject.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
 		logger.Info(fmt.Sprintf("Checking filter %s ", filterName))
-		filtersC = append(filtersC, filterName)
-		exists, err := r.ApicClient.FilterExists(filterName, segPolObject.Spec.Tenant)
-		logger.Info(fmt.Sprintf("Result FilterExists %s:%s ", strconv.FormatBool(exists), err))
-		if err != nil {
-			return ctrl.Result{}, err
-		}
+		filtersSegPol = append(filtersSegPol, filterName)
 		// Only create a filter if it does not exist already
-		if !exists {
+		if exists, _ := r.ApicClient.FilterExists(filterName, segPolObject.Spec.Tenant); !exists {
 			logger.Info(fmt.Sprintf("Creating Filter %s", filterName))
 			r.ApicClient.CreateFilterAndFilterEntry(segPolObject.Spec.Tenant, filterName, rule.Eth, rule.IP, rule.Port)
-			logger.Info(fmt.Sprintf("Creating Filter %s", filterName))
+			// Annotation is required to keep track of the filters SegmentationPolicy Object created on the APIC
+			logger.Info(fmt.Sprintf("Tag Filter %s with annotation %s", filterName, segPolObject.Name))
 			r.ApicClient.AddTagAnnotationToFilter(filterName, segPolObject.Spec.Tenant, segPolObject.Name, segPolObject.Name)
-		} else {
-			logger.Info(fmt.Sprintf("Filter %s already exists ", filterName))
 		}
 	}
 	//Delete filters
-	filters, err := r.ApicClient.GetFilterWithAnnotation(segPolObject.Spec.Tenant, segPolObject.Name)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	logger.Info(fmt.Sprintf("List of Filters under Policy %s :  %s", segPolObject.Name, filters))
-	for _, fltApic := range filters {
-		toDel := true
-		for _, fltK8s := range filtersC {
-			if fltApic == fltK8s {
-				toDel = false
-			}
-		}
-		if toDel {
-			logger.Info(fmt.Sprintf("Deleting Filter %s", fltApic))
-			r.ApicClient.DeleteFilter(segPolObject.Spec.Tenant, fltApic)
-		}
+	filtersApic, _ := r.ApicClient.GetFilterWithAnnotation(segPolObject.Spec.Tenant, segPolObject.Name)
+	logger.Info(fmt.Sprintf("List of filters under Policy %s :  %s", segPolObject.Name, filtersApic))
+	for _, fltApic := range utils.Unique(filtersSegPol, filtersApic) {
+		logger.Info(fmt.Sprintf("Deleting Filter %s", fltApic))
+		r.ApicClient.DeleteFilter(segPolObject.Spec.Tenant, fltApic)
 	}
 	return ctrl.Result{}, nil
 }
