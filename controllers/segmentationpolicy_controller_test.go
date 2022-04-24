@@ -189,7 +189,7 @@ var _ = Describe("Segmentation Policy controller", func() {
 
 	// For the SegmentationPolicy #2 not all the defined Namespaces exist in the K8s Cluster.
 	// There is also a Namespaces defined in SegmentationPolicy #1 and SegmentationPolicy #2
-	Context("Creating an additional Segmentation Policy", func() {
+	Context("When creating an additional Segmentation Policy", func() {
 
 		It("Should create additional APIC Objects when an additional Segmentation Policy is created", func() {
 			// Create in the K8s Cluster additional Namespaces. The new Namespaces do not match the ones stated in the Segmentation Policy #2
@@ -217,7 +217,7 @@ var _ = Describe("Segmentation Policy controller", func() {
 					err := k8sClient.Get(ctx, segPolLookupKey, createdSegPol)
 					return err == nil
 				}, timeout, interval).Should(BeTrue())
-				Expect(createdSegPol.Name).Should(Equal("segpol2"))
+				Expect(createdSegPol.Name).Should(Equal(segPol2.Name))
 			})
 			By("Checking created APIC EPGs for both Segmentation Policies", func() {
 
@@ -248,9 +248,9 @@ var _ = Describe("Segmentation Policy controller", func() {
 			})
 			// Namespaces defined in both Segmentation Policies should have two Tag Annotation. One per Segmentation Policy
 			By("Checking EPG with multiple tags", func() {
-				tags, _ := apicClient.GetAnnotationsEpg("ns-b", fmt.Sprintf(ApplicationProfileNamePrefix, segPol1.Spec.Tenant), segPol2.Spec.Tenant)
+				tags, _ := apicClient.GetAnnotationsEpg("ns-b", fmt.Sprintf(ApplicationProfileNamePrefix, segPol1.Spec.Tenant), segPol1.Spec.Tenant)
 				sort.Strings(tags)
-				Expect(tags).Should(Equal([]string{"segpol1", "segpol2"}))
+				Expect(tags).Should(Equal([]string{segPol1.Name, segPol2.Name}))
 
 			})
 			By("Checking EPG providing and consuming multiple contracts", func() {
@@ -265,7 +265,7 @@ var _ = Describe("Segmentation Policy controller", func() {
 	// The updated version of SegmentationPolicy #2 no longer defines a K8s Namespaces. The corresponding EPG is deleted
 	// The updated version of SegmentationPolicy #2 defines another K8s Namespaces. A new EPG is created
 	// The updated version of SegmentationPolicy #2 defines a Namespaces that does not exist in K8s. Nothing should happen
-	Context("Updating an existing Segmentation Policy", func() {
+	Context("When updating an existing Segmentation Policy", func() {
 
 		It("Should update EPGs and Filters on the APIC", func() {
 			// Update SegmentationPolicy #2.
@@ -341,7 +341,7 @@ var _ = Describe("Segmentation Policy controller", func() {
 	})
 
 	// Delete SegmentationPolicy #1
-	Context("Delete a Segmentation Policy", func() {
+	Context("When deleting a Segmentation Policy", func() {
 		It("Should delete contracts and update EPGs", func() {
 			By("Deleting  a Segmentation Policy", func() {
 				Expect(k8sClient.Delete(ctx, segPol1)).Should(Succeed())
@@ -382,7 +382,69 @@ var _ = Describe("Segmentation Policy controller", func() {
 			})
 		})
 	})
-	Context("Delete remaining Segmentation Policy", func() {
+
+	// Create K8s Namespaces alreay listed in a SegmentationPolicy
+	Context("When creating a new namespace, which is defined in a SegmentationPolicy", func() {
+		It("Should update the affected Segmentation Policies", func() {
+			By("Creating new K8s Namespaces", func() {
+				newNs := &corev1.Namespace{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "v1",
+						Kind:       "Namespace",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "ns-e",
+					},
+				}
+				Expect(k8sClient.Create(ctx, newNs)).Should(Succeed())
+			})
+			By("Checking a EPG has been created", func() {
+				Eventually(func() bool {
+					exists, _ := apicClient.EpgExists("ns-e", fmt.Sprintf(ApplicationProfileNamePrefix, segPol2.Spec.Tenant), segPol2.Spec.Tenant)
+					return exists
+				}, timeout, interval).Should(BeTrue())
+			})
+			By("Checking the EPG consumes/provides contract associated with the Segmenation Policy", func() {
+				contracts, _ := apicClient.GetContracts("ns-e", fmt.Sprintf(ApplicationProfileNamePrefix, segPol2.Spec.Tenant), segPol2.Spec.Tenant)
+				Expect(contracts["consumed"]).Should(Equal([]string{segPol2.Name}))
+				Expect(contracts["provided"]).Should(Equal([]string{segPol2.Name}))
+			})
+			By("Checking EPG with the corresponding tags", func() {
+				tags, _ := apicClient.GetAnnotationsEpg("ns-f", fmt.Sprintf(ApplicationProfileNamePrefix, segPol2.Spec.Tenant), segPol2.Spec.Tenant)
+				sort.Strings(tags)
+				Expect(tags).Should(Equal([]string{segPol2.Name}))
+
+			})
+		})
+	})
+
+	// Delete K8s Namespaces alreay listed in a SegmentationPolicy
+	// TODO: Namespaces cannot be deleted from EnvTest. See https://github.com/kubernetes-sigs/controller-runtime/issues/880
+	Context("When deleting a namespace, which is degined in multiple Segmentation Policies", func() {
+		It("Should update the affected Segmentation Policies", func() {
+			// By("Deleting new K8s Namespaces", func() {
+			// 	newNs := &corev1.Namespace{
+			// 		TypeMeta: metav1.TypeMeta{
+			// 			APIVersion: "v1",
+			// 			Kind:       "Namespace",
+			// 		},
+			// 		ObjectMeta: metav1.ObjectMeta{
+			// 			Name: "ns-c",
+			// 		},
+			// 	}
+			// 	Expect(k8sClient.Delete(ctx, newNs)).Should(Succeed())
+			// })
+			// By("Checking a EPG has been deleted", func() {
+			// 	Eventually(func() bool {
+			// 		exists, _ := apicClient.EpgExists("ns-c", fmt.Sprintf(ApplicationProfileNamePrefix, segPol2.Spec.Tenant), segPol2.Spec.Tenant)
+			// 		return exists
+			// 	}, timeout, interval).Should(BeFalse())
+			// })
+		})
+	})
+
+	// Delete SegmentationPolicy #2
+	Context("When deleting the  remaining Segmentation Policy", func() {
 
 		It("Should delete APIC Objects when a Segmentation Policy is deleted", func() {
 			// DeleteSegmentationPolicy #2.
