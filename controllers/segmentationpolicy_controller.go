@@ -148,9 +148,8 @@ func (r *SegmentationPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 // Generate SegmentationPolicy request based on changes in the K8s Namespaces
 func (r *SegmentationPolicyReconciler) nameSpaceSegPolicyMapFunc(object client.Object) []reconcile.Request {
 	modifiedNs := object.(*corev1.Namespace)
-	// logger := log.FromContext(context.TODO())
-	fmt.Printf("Namespace  %s modified", modifiedNs.Name)
-
+	logger := log.FromContext(context.TODO())
+	logger.Info(fmt.Sprintf("Namespace %s modified", modifiedNs))
 	currentSegmentationPolicies := &v1alpha1.SegmentationPolicyList{}
 	err := r.List(context.TODO(), currentSegmentationPolicies)
 	if err != nil {
@@ -160,17 +159,16 @@ func (r *SegmentationPolicyReconciler) nameSpaceSegPolicyMapFunc(object client.O
 	for _, pol := range currentSegmentationPolicies.Items {
 		for _, ns := range pol.Spec.Namespaces {
 			if ns == modifiedNs.Name {
-				fmt.Printf("Create Request for SegmentationPolicy %s", pol.Name)
 				requests = append(requests, reconcile.Request{
 					NamespacedName: types.NamespacedName{
 						Name:      pol.GetName(),
 						Namespace: pol.GetNamespace(),
 					},
 				})
+				logger.Info(fmt.Sprintf("Creating Reconcile request for SegmentationPolicy %s", pol.Name))
 			}
 		}
 	}
-	fmt.Printf("Requests: %s", requests)
 	return requests
 }
 
