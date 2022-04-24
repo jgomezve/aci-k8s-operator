@@ -242,7 +242,6 @@ var _ = Describe("Segmentation Policy controller", func() {
 						}, timeout, interval).Should(BeTrue())
 					}
 					apicFilters, _ := apicClient.GetContractFilters(segPol.Name, segPol.Spec.Tenant)
-					fmt.Printf("Filters Contract %s : %s", segPol.Name, apicFilters)
 					Expect(apicFilters).Should(Equal(filters))
 				}
 			})
@@ -321,7 +320,6 @@ var _ = Describe("Segmentation Policy controller", func() {
 					}, timeout, interval).Should(BeTrue())
 				}
 				apicFilters, _ := apicClient.GetContractFilters(segPol2_1.Name, segPol1.Spec.Tenant)
-				fmt.Printf("Filters Contract %s : %s", segPol2_1.Name, apicFilters)
 				Expect(apicFilters).Should(Equal(filters))
 			})
 			// TODO. Calculate dynamically the affected K8s Namespaces by comparing the list Namespaces in the Segmentation Policies

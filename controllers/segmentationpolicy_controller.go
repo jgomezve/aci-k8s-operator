@@ -101,41 +101,36 @@ func (r *SegmentationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, nil
 	}
 
-	// TODO: Check Result
 	// Reconcile K8s SegmentationPolicies' Namespaces and APIC EPGs
-	_, err = r.ReconcileNamespacesEpgs(ctx, logger, segPolObject)
+	result, err := r.ReconcileNamespacesEpgs(ctx, logger, segPolObject)
 	if err != nil {
-		return ctrl.Result{}, err
+		return result, err
 	}
 
 	// Create Contract and Subject and associate the filters
-	filters := []string{}
+	filtersSegPol := []string{}
 	for _, rule := range segPolObject.Spec.Rules {
 		filterName := fmt.Sprintf("%s_%s%s%s", segPolObject.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
-		filters = append(filters, filterName)
+		filtersSegPol = append(filtersSegPol, filterName)
 	}
-	r.ApicClient.CreateContract(segPolObject.Spec.Tenant, segPolObject.Name, filters)
+
+	// Create contract (and subject) with all the filters listed in the SegmentationPolicy
+	r.ApicClient.CreateContract(segPolObject.Spec.Tenant, segPolObject.Name, filtersSegPol)
 	logger.Info(fmt.Sprintf("Creating Contract/Subject %s", segPolObject.Name))
 
+	// Read from the APIC the filters configured on the contract
 	apicFilters, _ := r.ApicClient.GetContractFilters(segPolObject.Name, segPolObject.Spec.Tenant)
 	logger.Info(fmt.Sprintf("Contract Filters %s", apicFilters))
 
-	for _, apicFlt := range apicFilters {
-		found := false
-		for _, specFlt := range filters {
-			if specFlt == apicFlt {
-				found = true
-			}
-		}
-		if !found {
-			r.ApicClient.DeleteFilterFromSubjectContract(segPolObject.Name, segPolObject.Spec.Tenant, apicFlt)
-		}
+	// Delete/Update SubjectToFilter associations configured on the APIC but not listed in the SegmentationPolicy
+	for _, apicFlt := range utils.Unique(filtersSegPol, apicFilters) {
+		r.ApicClient.DeleteFilterFromSubjectContract(segPolObject.Name, segPolObject.Spec.Tenant, apicFlt)
 	}
 
 	// Reconcile K8s SegmentationPolicies' Rules and APIC Filters
-	_, err = r.ReconcileRulesFilters(logger, segPolObject)
+	result, err = r.ReconcileRulesFilters(logger, segPolObject)
 	if err != nil {
-		return ctrl.Result{}, err
+		return result, err
 	}
 
 	return ctrl.Result{}, nil
@@ -153,9 +148,8 @@ func (r *SegmentationPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 // Generate SegmentationPolicy request based on changes in the K8s Namespaces
 func (r *SegmentationPolicyReconciler) nameSpaceSegPolicyMapFunc(object client.Object) []reconcile.Request {
 	modifiedNs := object.(*corev1.Namespace)
-	// logger := log.FromContext(context.TODO())
-	fmt.Printf("Namespace  %s modified", modifiedNs.Name)
-
+	logger := log.FromContext(context.TODO())
+	logger.Info(fmt.Sprintf("Namespace %s modified", modifiedNs))
 	currentSegmentationPolicies := &v1alpha1.SegmentationPolicyList{}
 	err := r.List(context.TODO(), currentSegmentationPolicies)
 	if err != nil {
@@ -165,17 +159,16 @@ func (r *SegmentationPolicyReconciler) nameSpaceSegPolicyMapFunc(object client.O
 	for _, pol := range currentSegmentationPolicies.Items {
 		for _, ns := range pol.Spec.Namespaces {
 			if ns == modifiedNs.Name {
-				fmt.Printf("Create Request for SegmentationPolicy %s", pol.Name)
 				requests = append(requests, reconcile.Request{
 					NamespacedName: types.NamespacedName{
 						Name:      pol.GetName(),
 						Namespace: pol.GetNamespace(),
 					},
 				})
+				logger.Info(fmt.Sprintf("Creating Reconcile request for SegmentationPolicy %s", pol.Name))
 			}
 		}
 	}
-	fmt.Printf("Requests: %s", requests)
 	return requests
 }
 
@@ -258,7 +251,7 @@ func (r *SegmentationPolicyReconciler) ReconcileNamespacesEpgs(ctx context.Conte
 	// Get EPGs configured on the APIC with the SegmentPolicy annotation
 	epgApic, _ := r.ApicClient.GetEpgWithAnnotation(fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name)
 	logger.Info(fmt.Sprintf("List of EPGs under Policy %s :  %s", segPolObject.Name, epgApic))
-	// Delete/Update those EPGs configued on the APIC but not listed in the SegmentationPolicy
+	// Delete/Update those EPGs configured on the APIC but not listed in the SegmentationPolicy
 	for _, epg := range utils.Unique(utils.Intersect(nsClusterNames, segPolObject.Spec.Namespaces), epgApic) {
 		logger.Info(fmt.Sprintf("EPG must be updated %s", epg))
 		annotations, _ := r.ApicClient.GetAnnotationsEpg(epg, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant)
