@@ -172,14 +172,14 @@ var _ = Describe("Segmentation Policy controller", func() {
 			By("Checking created APIC EPGs", func() {
 				for _, ns := range segPol1.Spec.Namespaces {
 					Eventually(func() bool {
-						exists, _ := apicClient.EpgExists(ns, fmt.Sprintf("Seg_Pol_%s", segPol1.Spec.Tenant), segPol1.Spec.Tenant)
+						exists, _ := apicClient.EpgExists(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPol1.Spec.Tenant), segPol1.Spec.Tenant)
 						return exists
 					}, timeout, interval).Should(BeTrue())
 				}
 			})
 			By("Checking contracts consumed/provided by EPG", func() {
 				for _, ns := range segPol1.Spec.Namespaces {
-					contracts, _ := apicClient.GetContracts(ns, fmt.Sprintf("Seg_Pol_%s", segPol1.Spec.Tenant), segPol1.Spec.Tenant)
+					contracts, _ := apicClient.GetContracts(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPol1.Spec.Tenant), segPol1.Spec.Tenant)
 					Expect(contracts["consumed"]).Should(Equal([]string{segPol1.Name}))
 					Expect(contracts["provided"]).Should(Equal([]string{segPol1.Name}))
 				}
@@ -224,7 +224,7 @@ var _ = Describe("Segmentation Policy controller", func() {
 				for _, segPol := range []v1alpha1.SegmentationPolicy{*segPol1, *segPol2} {
 					for _, ns := range segPol.Spec.Namespaces {
 						Eventually(func() bool {
-							exists, _ := apicClient.EpgExists(ns, fmt.Sprintf("Seg_Pol_%s", segPol.Spec.Tenant), segPol.Spec.Tenant)
+							exists, _ := apicClient.EpgExists(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPol.Spec.Tenant), segPol.Spec.Tenant)
 							return exists
 						}, timeout, interval).Should(BeTrue())
 					}
@@ -248,13 +248,13 @@ var _ = Describe("Segmentation Policy controller", func() {
 			})
 			// Namespaces defined in both Segmentation Policies should have two Tag Annotation. One per Segmentation Policy
 			By("Checking EPG with multiple tags", func() {
-				tags, _ := apicClient.GetAnnotationsEpg("ns-b", fmt.Sprintf("Seg_Pol_%s", segPol1.Spec.Tenant), segPol2.Spec.Tenant)
+				tags, _ := apicClient.GetAnnotationsEpg("ns-b", fmt.Sprintf(ApplicationProfileNamePrefix, segPol1.Spec.Tenant), segPol2.Spec.Tenant)
 				sort.Strings(tags)
 				Expect(tags).Should(Equal([]string{"segpol1", "segpol2"}))
 
 			})
 			By("Checking EPG providing and consuming multiple contracts", func() {
-				contracts, _ := apicClient.GetContracts("ns-b", fmt.Sprintf("Seg_Pol_%s", segPol1.Spec.Tenant), segPol1.Spec.Tenant)
+				contracts, _ := apicClient.GetContracts("ns-b", fmt.Sprintf(ApplicationProfileNamePrefix, segPol1.Spec.Tenant), segPol1.Spec.Tenant)
 				Expect(contracts["consumed"]).Should(Equal([]string{segPol1.Name, segPol2.Name}))
 				Expect(contracts["provided"]).Should(Equal([]string{segPol1.Name, segPol2.Name}))
 			})
@@ -290,16 +290,16 @@ var _ = Describe("Segmentation Policy controller", func() {
 			})
 			By("Checking a EPG has been deleted", func() {
 				Eventually(func() bool {
-					exists, _ := apicClient.EpgExists("ns-d", fmt.Sprintf("Seg_Pol_%s", segPol2.Spec.Tenant), segPol2.Spec.Tenant)
+					exists, _ := apicClient.EpgExists("ns-d", fmt.Sprintf(ApplicationProfileNamePrefix, segPol2.Spec.Tenant), segPol2.Spec.Tenant)
 					return exists
 				}, timeout, interval).Should(BeFalse())
 			})
 			By("Checking a Tag has been removed from an EPG", func() {
-				tags, _ := apicClient.GetAnnotationsEpg("ns-b", fmt.Sprintf("Seg_Pol_%s", segPol1.Spec.Tenant), segPol2.Spec.Tenant)
+				tags, _ := apicClient.GetAnnotationsEpg("ns-b", fmt.Sprintf(ApplicationProfileNamePrefix, segPol1.Spec.Tenant), segPol2.Spec.Tenant)
 				Expect(tags).Should(Equal([]string{segPol1.Name}))
 			})
 			By("Checking EPG no longer consumes a Contract", func() {
-				contracts, _ := apicClient.GetContracts("ns-b", fmt.Sprintf("Seg_Pol_%s", segPol1.Spec.Tenant), segPol1.Spec.Tenant)
+				contracts, _ := apicClient.GetContracts("ns-b", fmt.Sprintf(ApplicationProfileNamePrefix, segPol1.Spec.Tenant), segPol1.Spec.Tenant)
 				Expect(contracts["consumed"]).Should(Equal([]string{segPol1.Name}))
 				Expect(contracts["provided"]).Should(Equal([]string{segPol1.Name}))
 			})
@@ -327,13 +327,13 @@ var _ = Describe("Segmentation Policy controller", func() {
 			// TODO. Calculate dynamically the affected K8s Namespaces by comparing the list Namespaces in the Segmentation Policies
 			By("Checking a new EPG exist", func() {
 				Eventually(func() bool {
-					exists, _ := apicClient.EpgExists("ns-f", fmt.Sprintf("Seg_Pol_%s", segPol2.Spec.Tenant), segPol2.Spec.Tenant)
+					exists, _ := apicClient.EpgExists("ns-f", fmt.Sprintf(ApplicationProfileNamePrefix, segPol2.Spec.Tenant), segPol2.Spec.Tenant)
 					return exists
 				}, timeout, interval).Should(BeTrue())
 			})
 			By("Checking a EPG was not created", func() {
 				Eventually(func() bool {
-					exists, _ := apicClient.EpgExists("ns-e", fmt.Sprintf("Seg_Pol_%s", segPol2.Spec.Tenant), segPol2.Spec.Tenant)
+					exists, _ := apicClient.EpgExists("ns-e", fmt.Sprintf(ApplicationProfileNamePrefix, segPol2.Spec.Tenant), segPol2.Spec.Tenant)
 					return exists
 				}, timeout, interval).Should(BeFalse())
 			})
@@ -364,19 +364,19 @@ var _ = Describe("Segmentation Policy controller", func() {
 			By("Checking that EPGs only managed by that SegmentationPolicy are deleted", func() {
 				for _, ns := range []string{"ns-a", "ns-b"} {
 					Eventually(func() bool {
-						exists, _ := apicClient.EpgExists(ns, fmt.Sprintf("Seg_Pol_%s", segPol1.Spec.Tenant), segPol1.Spec.Tenant)
+						exists, _ := apicClient.EpgExists(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPol1.Spec.Tenant), segPol1.Spec.Tenant)
 						return exists
 					}, timeout, interval).Should(BeFalse())
 				}
 			})
 			By("Checking that EPGs managed by other SegmentationPolicy are not deleted", func() {
 				Eventually(func() bool {
-					exists, _ := apicClient.EpgExists("ns-c", fmt.Sprintf("Seg_Pol_%s", segPol1.Spec.Tenant), segPol1.Spec.Tenant)
+					exists, _ := apicClient.EpgExists("ns-c", fmt.Sprintf(ApplicationProfileNamePrefix, segPol1.Spec.Tenant), segPol1.Spec.Tenant)
 					return exists
 				}, timeout, interval).Should(BeTrue())
 			})
 			By("Checking that EPG only consumes contract associated with SegmentationPolcy 1", func() {
-				contracts, _ := apicClient.GetContracts("ns-c", fmt.Sprintf("Seg_Pol_%s", segPol1.Spec.Tenant), segPol1.Spec.Tenant)
+				contracts, _ := apicClient.GetContracts("ns-c", fmt.Sprintf(ApplicationProfileNamePrefix, segPol1.Spec.Tenant), segPol1.Spec.Tenant)
 				Expect(contracts["consumed"]).Should(Equal([]string{segPol2.Name}))
 				Expect(contracts["provided"]).Should(Equal([]string{segPol2.Name}))
 			})
@@ -411,7 +411,7 @@ var _ = Describe("Segmentation Policy controller", func() {
 				for _, segPol := range []v1alpha1.SegmentationPolicy{*segPol1, *segPol2} {
 					for _, ns := range segPol.Spec.Namespaces {
 						Eventually(func() bool {
-							exists, _ := apicClient.EpgExists(ns, fmt.Sprintf("Seg_Pol_%s", segPol.Spec.Tenant), segPol.Spec.Tenant)
+							exists, _ := apicClient.EpgExists(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPol.Spec.Tenant), segPol.Spec.Tenant)
 							return exists
 						}, timeout, interval).Should(BeFalse())
 					}
