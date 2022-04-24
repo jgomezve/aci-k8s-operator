@@ -207,7 +207,7 @@ func (ac *ApicClientMocks) GetContractFilters(contractName, tenantName string) (
 
 func (ac *ApicClientMocks) DeleteFilterFromSubjectContract(subjectName, tenantName, filter string) error {
 	dn := fmt.Sprintf("uni/tn-%s/brp-%s", tenantName, subjectName)
-	fmt.Printf("Deleting filter %s from contract %s", filter, subjectName)
+	fmt.Printf("Deleting filter %s from contract %s\n", filter, subjectName)
 	ftls := ac.contracts[dn].filters
 	ac.contracts[dn] = contract{name: subjectName, tnt: tenantName, filters: utils.Remove(ftls, filter)}
 	return nil
