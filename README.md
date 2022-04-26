@@ -28,100 +28,75 @@ Even though the ACI-CNI allows Kubernetes Administrators to map Namespaces/Deplo
 
 **Your Kubernetes cluster must have already been configured to use the Cisco ACI CNI**
 
+* Clone this repository
+
+      git clone https://github.com/jgomezve/aci-k8s-operator
+      cd aci-k8s-operator
+
 * Configure the `SegmentationPolicy` Custom Resource Definition (CRD)
 
-*segmentation_policy_crd.yaml*
-```yaml
----
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  annotations:
-    controller-gen.kubebuilder.io/version: v0.8.0
-  creationTimestamp: null
-  name: segmentationpolicies.apic.aci.cisco
-spec:
-  group: apic.aci.cisco
-  names:
-    kind: SegmentationPolicy
-    listKind: SegmentationPolicyList
-    plural: segmentationpolicies
-    singular: segmentationpolicy
-  scope: Namespaced
-  versions:
-  - name: v1alpha1
-    schema:
-      openAPIV3Schema:
-        description: SegmentationPolicy is the Schema for the segmentationpolicies
-          API
-        properties:
-          apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-            type: string
-          kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-            type: string
-          metadata:
-            type: object
-          spec:
-            description: SegmentationPolicySpec defines the desired state of SegmentationPolicy
-            properties:
-              namespaces:
-                items:
-                  type: string
-                type: array
-              rules:
-                items:
-                  properties:
-                    eth:
-                      type: string
-                    ip:
-                      type: string
-                    port:
-                      type: integer
-                  type: object
-                type: array
-              tenant:
-                minLength: 0
-                type: string
-            required:
-            - namespaces
-            - rules
-            - tenant
-            type: object
-          status:
-            description: SegmentationPolicyStatus defines the observed state of SegmentationPolicy
-            type: object
-        type: object
-    served: true
-    storage: true
-    subresources:
-      status: {}
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []
+      make install
+
+```
+$ kubectl get crd
+NAME                                    CREATED AT
+segmentationpolicies.apic.aci.cisco     2022-04-19T15:58:11Z
 ```
 
-      kubectl apply -f segmentation_policy_crd.yaml
-
-> **_NOTE:_** Alternatively you could execute `make install`
+> **_NOTE:_** The CRD manifest is located used `config/crd/bases/apic.aci.cisco_segmentationpolicies.yaml`
 
 * Start the operator
  
 ### Option 1: Operator running outside of the K8s Cluster
 
+* Set the APIC credentials as environmental variables
 
+      export APIC_HOST=<apic_ip_address>
+      export APIC_USERNAME=<apic_username>
+      export APIC_PASSWORD=<apic_password>
+
+* Compile the code and execute the binary file 
+
+      make run
+
+```
+1.6509721382001133e+09	INFO	setup	starting manager
+1.6509721382004604e+09	INFO	controller.segmentationpolicy	Starting EventSource	{"reconciler group": "apic.aci.cisco", "reconciler kind": "SegmentationPolicy", "source": "kind source: *v1alpha1.SegmentationPolicy"}
+1.650972138200524e+09	INFO	controller.segmentationpolicy	Starting EventSource	{"reconciler group": "apic.aci.cisco", "reconciler kind": "SegmentationPolicy", "source": "kind source: *v1.Namespace"}
+1.6509721382005382e+09	INFO	controller.segmentationpolicy	Starting Controller	{"reconciler group": "apic.aci.cisco", "reconciler kind": "SegmentationPolicy"}
+1.6509721383018e+09	INFO	controller.segmentationpolicy	Starting workers	{"reconciler group": "apic.aci.cisco", "reconciler kind": "SegmentationPolicy", "worker count": 1}
+```
 ### Option 2: Operator running as a Container in the K8s Cluster
+      
+      make deploy
 
-* Configure a `SegmentationPolicy` Custom Resource (CR) 
+### Usage 
 
+
+* Create four namespaces
+
+      kubectl create ns <ns_name>
+
+```
+NAME                    STATUS   AGE
+aci-containers-system   Active   145d
+cattle-system           Active   145d
+default                 Active   145d
+fleet-system            Active   145d
+ingress-nginx           Active   145d
+kube-node-lease         Active   145d
+kube-public             Active   145d
+kube-system             Active   145d
+ns1                     Active   11s
+ns2                     Active   8s
+ns3                     Active   5s
+ns4                     Active   3s
+
+```
+
+* Configure a two `SegmentationPolicy` Custom Resources (CR) 
+
+*apic_v1alpha1_segmentationpolicy.yaml*
 ```yaml
 apiVersion: apic.aci.cisco/v1alpha1
 kind: SegmentationPolicy
@@ -137,7 +112,34 @@ spec:
     - eth: ip
       ip: udp
       port: 53
+---
+apiVersion: apic.aci.cisco/v1alpha1
+kind: SegmentationPolicy
+metadata:
+  name: segpol2
+spec:
+  tenant: k8s-operator
+  namespaces:
+    - ns2
+    - ns3
+    - ns4
+  rules:
+    - eth: ip
+      ip: tcp
+      port: 80 
 ```
 
+      kubectl apply -f apic_v1alpha1_segmentationpolicy.yaml
 
+```
+$ kubectl get segmentationpolicies.apic.aci.cisco
+NAME      AGE
+segpol1   22s
+segpol2   22s
+```
+> **_NOTE:_** Examples can be found under `config/samples/apic_v1alpha1_segmentationpolicy.yaml`
+
+![add-app](docs/images/aci_topology.png "ACI Topology")
+
+## More Information
 Build using [Kubebuilder](https://book.kubebuilder.io/introduction.html)
