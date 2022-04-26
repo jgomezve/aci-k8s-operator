@@ -61,7 +61,7 @@ func (ac *ApicClientMocks) DeleteApplicationProfile(name, tenantName string) err
 	return nil
 }
 
-func (ac *ApicClientMocks) CreateEndpointGroup(name, description, appName, tenantName string) error {
+func (ac *ApicClientMocks) CreateEndpointGroup(name, description, appName, tenantName, bdName, vmmName string) error {
 	dn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, name)
 	fmt.Printf("Creating EPG %s \n", dn)
 	ac.endpointGroups[dn] = endpointGroup{name: name, app: appName, tnt: tenantName, tags: map[string]string{}, contracts: map[string][]string{}}
@@ -121,6 +121,9 @@ func (ac *ApicClientMocks) DeleteContractProvider(epgName, appName, tenantName, 
 	return nil
 }
 
+func (ac *ApicClientMocks) InheritContractFromMaster(epgName, appName, tenantName, appMasterName, epgMasterName string) error {
+	return nil
+}
 func (ac *ApicClientMocks) AddTagAnnotationToEpg(name, appName, tenantName, key, value string) error {
 	dn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, name)
 	fmt.Printf("Add Annotation {%s:%s} to EPG %s\n", key, value, dn)

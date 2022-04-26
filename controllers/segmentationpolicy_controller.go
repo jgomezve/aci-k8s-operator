@@ -24,6 +24,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -52,7 +53,11 @@ type SegmentationPolicyReconciler struct {
 }
 
 const (
-	ApplicationProfileNamePrefix = "Seg_Pol_%s"
+	ApplicationProfileNamePrefix  = "Seg_Pol_%s"
+	PodBridgeDomain               = "aci-containers-pod4-pod-bd"
+	KubernetesVmmDomain           = "pod4"
+	EPGKubeDefault                = "aci-containers-default"
+	ApplicationProfileKubeDefault = "aci-containers-pod4"
 )
 
 //+kubebuilder:rbac:groups=apic.aci.cisco,resources=segmentationpolicies,verbs=get;list;watch;create;update;patch;delete
@@ -239,9 +244,16 @@ func (r *SegmentationPolicyReconciler) ReconcileNamespacesEpgs(ctx context.Conte
 		} else {
 			// If not, create the EPG and add annotation
 			logger.Info(fmt.Sprintf("Creating EPG for Namespace %s", ns))
-			r.ApicClient.CreateEndpointGroup(ns, "", fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant)
+			r.ApicClient.CreateEndpointGroup(ns, "", fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, PodBridgeDomain, KubernetesVmmDomain)
 			logger.Info(fmt.Sprintf("Adding annotation to EPG  %s", ns))
 			r.ApicClient.AddTagAnnotationToEpg(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name, segPolObject.Name)
+			logger.Info(fmt.Sprintf("Inheriting Contracts from ap-%s/epg-%s", ApplicationProfileKubeDefault, EPGKubeDefault))
+			r.ApicClient.InheritContractFromMaster(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, ApplicationProfileKubeDefault, EPGKubeDefault)
+			logger.Info(fmt.Sprintf("Annotation K8s Namespace"))
+			err := r.AnnotateNamespace(ctx, ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant)
+			if err != nil {
+				logger.Info(fmt.Sprintf("Error k8s annotation %s", err))
+			}
 		}
 		// Always consume/provide contracts
 		r.ApicClient.ConsumeContract(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name)
@@ -298,4 +310,19 @@ func (r *SegmentationPolicyReconciler) ReconcileRulesFilters(logger logr.Logger,
 		r.ApicClient.DeleteFilter(segPolObject.Spec.Tenant, fltApic)
 	}
 	return ctrl.Result{}, nil
+}
+
+func (r *SegmentationPolicyReconciler) AnnotateNamespace(ctx context.Context, nsName, appName, tenantName string) error {
+	//patch := []byte(fmt.Sprintf(`{"metadata":{"annotations":{"opflex.cisco.com/endpoint-group": "'{"tenant":"%s","app-profile":"%s","name":"%s"}'"}}}`, tenantName, appName, nsName))
+	dnJson := fmt.Sprintf(`{\"tenant\":\"%s\",\"app-profile\":\"%s\",\"name\":\"%s\"}`, tenantName, appName, nsName)
+	patch := []byte(fmt.Sprintf(`{"metadata":{"annotations":{"opflex.cisco.com/endpoint-group": "%s"}}}`, dnJson))
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: nsName,
+		},
+	}
+	if err := r.Client.Patch(ctx, ns, client.RawPatch(types.MergePatchType, patch)); err != nil {
+		return err
+	}
+	return nil
 }
