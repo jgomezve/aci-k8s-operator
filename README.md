@@ -3,23 +3,43 @@
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/jgomezve/aci-k8s-operator)
 ![Kubernetes version](https://img.shields.io/badge/kubernetes-1.23%2B-blue)
 
+Define Network Segmentation Policies as Kubernetes Resources, enforces them on the ACI Fabric with the APIC Controller.
+
+This repository contains a Kubernetes Operator used to manage Kubernetes Namespaces Segmentation Rules, while are later enforced on the ACI Fabric by means ACI Constructs (EPGs, Contracts, Filter)
+
+## Requirements
+
+* [Cisco APIC](https://www.cisco.com/c/en/us/solutions/data-center-virtualization/application-centric-infrastructure/index.html) >= 5.2.x 
+* [Kubernetes](https://kubernetes.io/) >= 1.23
+* [ACI-CNI](https://www.cisco.com/c/en/us/td/docs/switches/datacenter/aci/apic/sw/kb/b_Kubernetes_Integration_with_ACI.html)
+* [Go](https://golang.org/doc/install) >= 1.17 (Optional)
+
+
+
+## Installation
+
+
+### Option 1: Operator running outside of the K8s Cluster
+
+
+### Option 2: Operator running as a Container in the K8s Cluster
+
+
+
 ```yaml
 apiVersion: apic.aci.cisco/v1alpha1
-kind: Tenant
+kind: SegmentationPolicy
 metadata:
-  name: tenant-k8s
+  name: segpol1
 spec:
-  name: tenant-k8s
-  description: Tenant created by K8s
+  tenant: k8s-operator
+  namespaces:
+    - ns1
+    - ns2
+  rules:
+    - eth: arp
+    - eth: ip
+      ip: udp
+      port: 53
 ```
-
-```
-$ kubectl get crd
-NAME                     CREATED AT
-tenants.apic.aci.cisco   2022-03-29T11:11:25Z
-$ kubectl get tenants
-NAME         AGE
-tenant-k8s   8m55s
-```
-
 Build using [Kubebuilder](https://book.kubebuilder.io/introduction.html)
