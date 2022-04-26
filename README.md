@@ -8,7 +8,9 @@ Define Network Segmentation Policies as Kubernetes Resources and enforce them on
 
 This repository contains a Kubernetes Operator used to manage Kubernetes Namespaces Segmentation Rules, which are later enforced on the ACI Fabric by means ACI Constructs (EPGs, Contracts, Filter)
 
-## Overview
+## Overview ACI CNI
+
+![add-app](docs/images/isolation_types.png "ACI CNI Mappings")
 
 The Cisco ACI-CNI takes care of enablinng network connectivity between Pods by provisioning network resources on the worker nodes and on the ACI Fabric. The ACI-CNI extends the ACI iVXLAN Encapsulation used on the ACI Fabric down to the OpenVSwitches running on the worker nodes. This integration gives the ACI Fabric more visibility into the Pod Network, therefore Pods are learned as endpoints of the ACI Fabric.
 
