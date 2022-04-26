@@ -1,19 +1,19 @@
 # ACI Kubernetes Operator
+(** REPOSITORY UNDER CONSTRUCTION !!**)
 [![Tests](https://github.com/jgomezve/aci-k8s-operator/actions/workflows/test.yaml/badge.svg)](https://github.com/jgomezve/aci-k8s-operator/actions/workflows/test.yaml)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/jgomezve/aci-k8s-operator)
 ![Kubernetes version](https://img.shields.io/badge/kubernetes-1.23%2B-blue)
 
 Define Network Segmentation Policies as Kubernetes Resources and enforce them on the ACI Fabric with the APIC Controller.
 
-This repository contains a Kubernetes Operator used to manage Kubernetes Namespaces Segmentation Rules, while are later enforced on the ACI Fabric by means ACI Constructs (EPGs, Contracts, Filter)
+This repository contains a Kubernetes Operator used to manage Kubernetes Namespaces Segmentation Rules, which are later enforced on the ACI Fabric by means ACI Constructs (EPGs, Contracts, Filter)
 
 ## Overview
 
-The Cisco ACI-CNI takes care of enablinng network connectivity between Pods by provisioning network resources on the worker nodes and on the ACI Fabric. The ACI-CNI extends the ACI iVXLAN Encapsulation used on the ACI Fabric down to the OpenVSwitches running on the worker nodes. This integration gives tha ACI Fabric more visibility into the Pod Network, therefore Pods are learned as endpoints of the ACI Fabric. It also allows you to 
+The Cisco ACI-CNI takes care of enablinng network connectivity between Pods by provisioning network resources on the worker nodes and on the ACI Fabric. The ACI-CNI extends the ACI iVXLAN Encapsulation used on the ACI Fabric down to the OpenVSwitches running on the worker nodes. This integration gives the ACI Fabric more visibility into the Pod Network, therefore Pods are learned as endpoints of the ACI Fabric.
 
 
-
-Even though the ACI-CNI allows Kubernetes Administrators to map Namespaces/Deployments to ACI Endpoint Group, further Policy definition on the ACI Fabric stills requires... . This operators aims to automate the provisioning of ACI Constructs by definition a new Kubernetes Resource (Segmentation Policy)
+Even though the ACI-CNI allows Kubernetes Administrators to map Namespaces/Deployments to ACI Endpoint Group, further Policy definition on the ACI Fabric stills requires the creation of ACI Constructs from Network Administrators. This operators aims to automate the provisioning of ACI Constructs by definition a new Kubernetes Resource (Segmentation Policy)
 
  ## Requirements
 
@@ -70,7 +70,7 @@ segmentationpolicies.apic.aci.cisco     2022-04-19T15:58:11Z
       
       make deploy
 
-### Usage 
+## Usage 
 
 
 * Create four namespaces
