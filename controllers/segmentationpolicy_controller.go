@@ -203,6 +203,7 @@ func (r *SegmentationPolicyReconciler) deleteSegPolicyFinalizerCallback(ctx cont
 		if len(annotations) == 1 && annotations[0] == segPolObject.Name {
 			logger.Info(fmt.Sprintf("Deleting EPG  %s", nsPol))
 			r.ApicClient.DeleteEndpointGroup(nsPol, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant)
+			r.RemoveAnnotationNamesapce(ctx, nsPol)
 			// If the EPG has more annotations, then remove the annotation that corresponds to the SegmentationPolicy, and stop consuming/providind the SegmentationPolicy's contract
 		} else if len(annotations) > 1 {
 			logger.Info(fmt.Sprintf("Removing annotation %s from EPG %s", segPolObject.Name, nsPol))
@@ -272,6 +273,7 @@ func (r *SegmentationPolicyReconciler) ReconcileNamespacesEpgs(ctx context.Conte
 		if len(annotations) == 1 && annotations[0] == segPolObject.Name {
 			logger.Info(fmt.Sprintf("Deleting EPG  %s", epg))
 			r.ApicClient.DeleteEndpointGroup(epg, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant)
+			r.RemoveAnnotationNamesapce(ctx, epg)
 			// If the EPG has more annotations, then remove the annotation that corresponds to the SegmentationPolicy, and stop consuming/providind the SegmentationPolicy's contract
 		} else if len(annotations) > 1 {
 			logger.Info(fmt.Sprintf("Removing annotation %s from EPG %s", segPolObject.Name, epg))
@@ -316,6 +318,21 @@ func (r *SegmentationPolicyReconciler) AnnotateNamespace(ctx context.Context, ns
 	//patch := []byte(fmt.Sprintf(`{"metadata":{"annotations":{"opflex.cisco.com/endpoint-group": "'{"tenant":"%s","app-profile":"%s","name":"%s"}'"}}}`, tenantName, appName, nsName))
 	dnJson := fmt.Sprintf(`{\"tenant\":\"%s\",\"app-profile\":\"%s\",\"name\":\"%s\"}`, tenantName, appName, nsName)
 	patch := []byte(fmt.Sprintf(`{"metadata":{"annotations":{"opflex.cisco.com/endpoint-group": "%s"}}}`, dnJson))
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: nsName,
+		},
+	}
+	if err := r.Client.Patch(ctx, ns, client.RawPatch(types.MergePatchType, patch)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *SegmentationPolicyReconciler) RemoveAnnotationNamesapce(ctx context.Context, nsName string) error {
+	//patch := []byte(fmt.Sprintf(`{"metadata":{"annotations":{"opflex.cisco.com/endpoint-group": "'{"tenant":"%s","app-profile":"%s","name":"%s"}'"}}}`, tenantName, appName, nsName))
+
+	patch := []byte(`{"metadata":{"annotations":{"opflex.cisco.com/endpoint-group": ""}}}`)
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: nsName,

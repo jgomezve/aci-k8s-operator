@@ -8,10 +8,13 @@ spec:
     - ns1
     - ns2
   rules:
-    - eth: arp
+    # - eth: ip
     - eth: ip
-      ip: udp
-      port: 53
+      ip: tcp
+      port: 80
+    - eth: ip
+      ip: tcp
+      port: 443
 ---
 apiVersion: apic.aci.cisco/v1alpha1
 kind: SegmentationPolicy
