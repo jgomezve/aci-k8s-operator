@@ -104,6 +104,7 @@ func (ac *ApicClientMocks) ProvideContract(epgName, appName, tenantName, conName
 
 func (ac *ApicClientMocks) GetContracts(epgName, appName, tenantName string) (map[string][]string, error) {
 	dn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, epgName)
+	fmt.Printf("Contracts consumed/provided by EPG %s : %s", dn, ac.endpointGroups[dn].contracts)
 	return ac.endpointGroups[dn].contracts, nil
 }
 

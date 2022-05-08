@@ -402,7 +402,7 @@ var _ = Describe("Segmentation Policy controller", func() {
 					return exists
 				}, timeout, interval).Should(BeTrue())
 			})
-			By("Checking the EPG consumes/provides contract associated with the Segmenation Policy", func() {
+			By("Checking the EPG consumes/provides contract associated with the Segmentation Policy", func() {
 				contracts, _ := apicClient.GetContracts("ns-e", fmt.Sprintf(ApplicationProfileNamePrefix, segPol2.Spec.Tenant), segPol2.Spec.Tenant)
 				Expect(contracts["consumed"]).Should(Equal([]string{segPol2.Name}))
 				Expect(contracts["provided"]).Should(Equal([]string{segPol2.Name}))
