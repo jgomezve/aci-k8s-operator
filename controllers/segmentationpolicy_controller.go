@@ -52,6 +52,16 @@ type SegmentationPolicyReconciler struct {
 	ApicClient aci.ApicInterface
 }
 
+type AciCniConfig struct {
+	ApicIp                        string
+	ApicUsername                  string
+	KeyPath                       string
+	PodBridgeDomain               string
+	KubernetesVmmDomain           string
+	EPGKubeDefault                string
+	ApplicationProfileKubeDefault string
+}
+
 const (
 	ApplicationProfileNamePrefix  = "Seg_Pol_%s"
 	PodBridgeDomain               = "aci-containers-pod4-pod-bd"
@@ -154,7 +164,7 @@ func (r *SegmentationPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 func (r *SegmentationPolicyReconciler) nameSpaceSegPolicyMapFunc(object client.Object) []reconcile.Request {
 	modifiedNs := object.(*corev1.Namespace)
 	logger := log.FromContext(context.TODO())
-	logger.Info(fmt.Sprintf("Namespace %s modified", modifiedNs))
+	logger.Info(fmt.Sprintf("Namespace %s modified", modifiedNs.Name))
 	currentSegmentationPolicies := &v1alpha1.SegmentationPolicyList{}
 	err := r.List(context.TODO(), currentSegmentationPolicies)
 	if err != nil {
