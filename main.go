@@ -51,7 +51,6 @@ import (
 var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
-	host     string
 	user     string
 	password string
 )
@@ -62,7 +61,7 @@ func init() {
 	utilruntime.Must(apicv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 
-	host, user, password = os.Getenv("APIC_HOST"), os.Getenv("APIC_USERNAME"), os.Getenv("APIC_PASSWORD")
+	user, password = os.Getenv("APIC_USERNAME"), os.Getenv("APIC_PASSWORD")
 }
 
 func getApicInformation(c client.Client, r rest.Interface, rc *rest.Config, s *runtime.Scheme) (controllers.AciCniConfig, error) {
@@ -119,7 +118,7 @@ func getApicInformation(c client.Client, r rest.Interface, rc *rest.Config, s *r
 	return controllers.AciCniConfig{
 		ApicIp:                        gjson.Get(configMap.Items[0].Data["controller-config"], "apic-hosts.1").String(),
 		ApicUsername:                  gjson.Get(configMap.Items[0].Data["controller-config"], "apic-username").String(),
-		ApicCertificate:               cert.String(),
+		ApicPrivateKey:                cert.String(),
 		KeyPath:                       gjson.Get(configMap.Items[0].Data["controller-config"], "apic-private-key-path").String(),
 		PodBridgeDomain:               strings.Replace(strings.Split(gjson.Get(configMap.Items[0].Data["controller-config"], "aci-podbd-dn").String(), "/")[2], "BD-", "", -1),
 		KubernetesVmmDomain:           gjson.Get(configMap.Items[0].Data["controller-config"], "aci-vmm-domain").String(),
@@ -172,7 +171,7 @@ func main() {
 	}
 	setupLog.Info(fmt.Sprintf("ACI CNI Configuration: %s", cniConf))
 
-	apicClient, err := aci.NewApicClient(cniConf.ApicIp, cniConf.ApicUsername, password, cniConf.ApicCertificate)
+	apicClient, err := aci.NewApicClient(cniConf.ApicIp, cniConf.ApicUsername, password, cniConf.ApicPrivateKey)
 	if err != nil {
 		setupLog.Error(err, "unable to setup the Apic Client")
 		os.Exit(1)

@@ -47,6 +47,7 @@ var (
 	ctx        context.Context
 	cancel     context.CancelFunc
 	apicClient aci.ApicInterface
+	cniConf    AciCniConfig
 )
 
 func TestAPIs(t *testing.T) {
@@ -91,18 +92,13 @@ var _ = BeforeSuite(func() {
 
 	apicClient = &aci.ApicMockClient
 	Expect(apicClient).NotTo(BeNil())
-
-	// err = (&TenantReconciler{
-	// 	Client:     k8sManager.GetClient(),
-	// 	Scheme:     k8sManager.GetScheme(),
-	// 	ApicClient: apicClient,
-	// }).SetupWithManager(k8sManager)
-	// Expect(err).ToNot(HaveOccurred())
+	cniConf = AciCniConfig{PodBridgeDomain: "my-test-bd", KubernetesVmmDomain: "my-test-k8s-vmm", EPGKubeDefault: "my-test-epg", ApplicationProfileKubeDefault: "my-test-app"}
 
 	err = (&SegmentationPolicyReconciler{
 		Client:     k8sManager.GetClient(),
 		Scheme:     k8sManager.GetScheme(),
 		ApicClient: apicClient,
+		CniConfig:  cniConf,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

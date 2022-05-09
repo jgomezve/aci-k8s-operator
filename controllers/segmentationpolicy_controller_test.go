@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/jgomezve/aci-operator/api/v1alpha1"
+	"github.com/jgomezve/aci-operator/pkg/aci"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -177,11 +178,26 @@ var _ = Describe("Segmentation Policy controller", func() {
 					}, timeout, interval).Should(BeTrue())
 				}
 			})
+			By("Checking EPG Configuration (VMM & BD)", func() {
+				for _, ns := range segPol1.Spec.Namespaces {
+					// Test only applies for the Mock!
+					epg := apicClient.(*aci.ApicClientMocks).GetEpg(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPol1.Spec.Tenant), segPol1.Spec.Tenant)
+					Expect(epg.Vmm).Should(Equal(cniConf.KubernetesVmmDomain))
+					Expect(epg.Bd).Should(Equal(cniConf.PodBridgeDomain))
+				}
+			})
 			By("Checking contracts consumed/provided by EPG", func() {
 				for _, ns := range segPol1.Spec.Namespaces {
 					contracts, _ := apicClient.GetContracts(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPol1.Spec.Tenant), segPol1.Spec.Tenant)
 					Expect(contracts["consumed"]).Should(Equal([]string{segPol1.Name}))
 					Expect(contracts["provided"]).Should(Equal([]string{segPol1.Name}))
+				}
+			})
+			By("Checking master EPG", func() {
+				for _, ns := range segPol1.Spec.Namespaces {
+					// Test only applies for the Mock!
+					epg := apicClient.(*aci.ApicClientMocks).GetEpg(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPol1.Spec.Tenant), segPol1.Spec.Tenant)
+					Expect(epg.Master).Should(Equal([]string{fmt.Sprintf("%s/%s", cniConf.ApplicationProfileKubeDefault, cniConf.EPGKubeDefault)}))
 				}
 			})
 		})

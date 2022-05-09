@@ -56,7 +56,7 @@ type SegmentationPolicyReconciler struct {
 type AciCniConfig struct {
 	ApicIp                        string
 	ApicUsername                  string
-	ApicCertificate               string
+	ApicPrivateKey                string
 	KeyPath                       string
 	PodBridgeDomain               string
 	KubernetesVmmDomain           string

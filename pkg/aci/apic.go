@@ -48,8 +48,8 @@ type ApicInterface interface {
 	GetContracts(epgName, appName, tenantName string) (map[string][]string, error)
 }
 
-func NewApicClient(host, user, password, certificate string) (*ApicClient, error) {
-	if certificate == "" {
+func NewApicClient(host, user, password, privateKey string) (*ApicClient, error) {
+	if privateKey == "" {
 		ac := &ApicClient{
 			host:     host,
 			user:     user,
@@ -62,7 +62,7 @@ func NewApicClient(host, user, password, certificate string) (*ApicClient, error
 			host:     host,
 			user:     user,
 			password: password,
-			client:   client.GetClient(fmt.Sprintf("https://%s/", host), user, client.PrivateKey(certificate), client.AdminCert(fmt.Sprintf("%s.crt", user)), client.Insecure(true), client.SkipLoggingPayload(true)),
+			client:   client.GetClient(fmt.Sprintf("https://%s/", host), user, client.PrivateKey(privateKey), client.AdminCert(fmt.Sprintf("%s.crt", user)), client.Insecure(true), client.SkipLoggingPayload(true)),
 		}
 		// Test the client
 		_, err := ac.client.ListSystem()
