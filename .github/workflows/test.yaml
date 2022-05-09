@@ -72,7 +72,7 @@ jobs:
 
       - name: Log into registry
         if: github.ref == 'refs/heads/main'
-        uses: docker/login-action@dd4fa0671be5250ee6f50aedf4cb05514abda2c7
+        uses: docker/login-action@49ed152c8eca782a232dede0303416e8f356c37b
         with:
           registry: docker.io
           username: jgomezve
@@ -82,7 +82,7 @@ jobs:
       - name: Build and push Docker image
         if: github.ref == 'refs/heads/main'
         id: build-and-push
-        uses: docker/build-push-action@ac9327eae2b366085ac7f6a2d02df8aa8ead720a
+        uses: docker/build-push-action@e551b19e49efd4e98792db7592c17c09b89db8d8
         with:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
