@@ -72,6 +72,8 @@ const (
 //+kubebuilder:rbac:groups=apic.aci.cisco,resources=segmentationpolicies/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=apic.aci.cisco,resources=segmentationpolicies/finalizers,verbs=update
 //+kubebuilder:rbac:groups=apic.aci.cisco,resources=namespaces,verbs=get;list;watch;
+//+kubebuilder:rbac:groups=apic.aci.cisco,resources=configmaps,verbs=get;list;
+//+kubebuilder:rbac:groups=apic.aci.cisco,resources=pods,verbs=get;list;
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

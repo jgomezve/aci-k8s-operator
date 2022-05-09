@@ -34,11 +34,25 @@ rules:
 - apiGroups:
   - apic.aci.cisco
   resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - apic.aci.cisco
+  resources:
   - namespaces
   verbs:
   - get
   - list
   - watch
+- apiGroups:
+  - apic.aci.cisco
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
 - apiGroups:
   - apic.aci.cisco
   resources:
