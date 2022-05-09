@@ -38,7 +38,6 @@ var _ = Describe("Segmentation Policy controller", func() {
 		SegmentationPolicyNamespace = "default"
 		SegmentationPolicyTenant    = "k8s-tenant"
 		timeout                     = time.Second * 10
-		duration                    = time.Second * 10
 		interval                    = time.Millisecond * 250
 	)
 
@@ -411,6 +410,14 @@ var _ = Describe("Segmentation Policy controller", func() {
 					},
 				}
 				Expect(k8sClient.Create(ctx, newNs)).Should(Succeed())
+				// Make sure the namespace is created
+				createdNs := &corev1.Namespace{}
+				nsLookupKey := types.NamespacedName{Name: "ns-e", Namespace: ""}
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, nsLookupKey, createdNs)
+					return err == nil
+				}, timeout, interval).Should(BeTrue())
+				Expect(createdNs.Name).Should(Equal("ns-e"))
 			})
 			By("Checking a EPG has been created", func() {
 				Eventually(func() bool {

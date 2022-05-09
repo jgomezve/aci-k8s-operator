@@ -250,10 +250,20 @@ func (r *SegmentationPolicyReconciler) ReconcileNamespacesEpgs(ctx context.Conte
 			// If the EPG already exist, just add a new annotation. (An EPG/NS can be included in multiple policies)
 			logger.Info(fmt.Sprintf("Adding annotation to EPG  %s", ns))
 			r.ApicClient.AddTagAnnotationToEpg(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name, segPolObject.Name)
+			// TODO: Unit Test error if Contracts are consumed/provided after the 'if' statement
+			// Always consume/provide contracts
+			logger.Info(fmt.Sprintf("Consume & Provide Segmentation Policy contract for EPG %s", ns))
+			r.ApicClient.ConsumeContract(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name)
+			r.ApicClient.ProvideContract(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name)
 		} else {
 			// If not, create the EPG and add annotation
 			logger.Info(fmt.Sprintf("Creating EPG for Namespace %s", ns))
 			r.ApicClient.CreateEndpointGroup(ns, "", fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, r.CniConfig.PodBridgeDomain, r.CniConfig.KubernetesVmmDomain)
+			// TODO: Unit Test error if Contracts are consumed/provided after the 'if' statement
+			// Always consume/provide contracts
+			logger.Info(fmt.Sprintf("Consume & Provide Segmentation Policy contract for EPG %s", ns))
+			r.ApicClient.ConsumeContract(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name)
+			r.ApicClient.ProvideContract(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name)
 			logger.Info(fmt.Sprintf("Adding annotation to EPG  %s", ns))
 			r.ApicClient.AddTagAnnotationToEpg(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name, segPolObject.Name)
 			logger.Info(fmt.Sprintf("Inheriting Contracts from ap-%s/epg-%s", r.CniConfig.ApplicationProfileKubeDefault, r.CniConfig.EPGKubeDefault))
@@ -264,9 +274,6 @@ func (r *SegmentationPolicyReconciler) ReconcileNamespacesEpgs(ctx context.Conte
 				logger.Info(fmt.Sprintf("Error k8s annotation %s", err))
 			}
 		}
-		// Always consume/provide contracts
-		r.ApicClient.ConsumeContract(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name)
-		r.ApicClient.ProvideContract(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name)
 	}
 
 	// Get EPGs configured on the APIC with the SegmentPolicy annotation
