@@ -5,6 +5,8 @@
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/jgomezve/aci-k8s-operator)
 ![Kubernetes version](https://img.shields.io/badge/kubernetes-1.23%2B-blue)
 
+![add-app](docs/images/aci-k8s-operator.png "ACI K8S Operator")
+
 Define Network Segmentation Policies as Kubernetes Resources and enforce them on the ACI Fabric with the APIC Controller.
 
 This repository contains a Kubernetes Operator used to manage Kubernetes Namespaces Segmentation Rules, which are later enforced on the ACI Fabric by means ACI Constructs (EPGs, Contracts, Filter)
