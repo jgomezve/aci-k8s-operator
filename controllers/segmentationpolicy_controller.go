@@ -50,11 +50,13 @@ type SegmentationPolicyReconciler struct {
 	client.Client
 	Scheme     *runtime.Scheme
 	ApicClient aci.ApicInterface
+	CniConfig  AciCniConfig
 }
 
 type AciCniConfig struct {
 	ApicIp                        string
 	ApicUsername                  string
+	ApicCertificate               string
 	KeyPath                       string
 	PodBridgeDomain               string
 	KubernetesVmmDomain           string
@@ -63,11 +65,7 @@ type AciCniConfig struct {
 }
 
 const (
-	ApplicationProfileNamePrefix  = "Seg_Pol_%s"
-	PodBridgeDomain               = "aci-containers-pod4-pod-bd"
-	KubernetesVmmDomain           = "pod4"
-	EPGKubeDefault                = "aci-containers-default"
-	ApplicationProfileKubeDefault = "aci-containers-pod4"
+	ApplicationProfileNamePrefix = "Seg_Pol_%s"
 )
 
 //+kubebuilder:rbac:groups=apic.aci.cisco,resources=segmentationpolicies,verbs=get;list;watch;create;update;patch;delete
@@ -255,11 +253,11 @@ func (r *SegmentationPolicyReconciler) ReconcileNamespacesEpgs(ctx context.Conte
 		} else {
 			// If not, create the EPG and add annotation
 			logger.Info(fmt.Sprintf("Creating EPG for Namespace %s", ns))
-			r.ApicClient.CreateEndpointGroup(ns, "", fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, PodBridgeDomain, KubernetesVmmDomain)
+			r.ApicClient.CreateEndpointGroup(ns, "", fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, r.CniConfig.PodBridgeDomain, r.CniConfig.KubernetesVmmDomain)
 			logger.Info(fmt.Sprintf("Adding annotation to EPG  %s", ns))
 			r.ApicClient.AddTagAnnotationToEpg(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name, segPolObject.Name)
-			logger.Info(fmt.Sprintf("Inheriting Contracts from ap-%s/epg-%s", ApplicationProfileKubeDefault, EPGKubeDefault))
-			r.ApicClient.InheritContractFromMaster(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, ApplicationProfileKubeDefault, EPGKubeDefault)
+			logger.Info(fmt.Sprintf("Inheriting Contracts from ap-%s/epg-%s", r.CniConfig.ApplicationProfileKubeDefault, r.CniConfig.EPGKubeDefault))
+			r.ApicClient.InheritContractFromMaster(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, r.CniConfig.ApplicationProfileKubeDefault, r.CniConfig.EPGKubeDefault)
 			logger.Info(fmt.Sprintf("Annotation K8s Namespace"))
 			err := r.AnnotateNamespace(ctx, ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant)
 			if err != nil {

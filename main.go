@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -26,18 +27,23 @@ import (
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	corev1 "k8s.io/api/core/v1"
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/client-go/rest"
+	remotecommand "k8s.io/client-go/tools/remotecommand"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	apicv1alpha1 "github.com/jgomezve/aci-operator/api/v1alpha1"
 	"github.com/jgomezve/aci-operator/controllers"
+	"github.com/jgomezve/aci-operator/pkg/aci"
 	"github.com/tidwall/gjson"
 	//+kubebuilder:scaffold:imports
 )
@@ -59,22 +65,67 @@ func init() {
 	host, user, password = os.Getenv("APIC_HOST"), os.Getenv("APIC_USERNAME"), os.Getenv("APIC_PASSWORD")
 }
 
-func getApicInformation(c client.Client) controllers.AciCniConfig {
+func getApicInformation(c client.Client, r rest.Interface, rc *rest.Config, s *runtime.Scheme) (controllers.AciCniConfig, error) {
 
+	// Read CNI Connfiguration from ConfigMap
 	configMap := &corev1.ConfigMapList{}
 	err := c.List(context.TODO(), configMap, client.InNamespace("aci-containers-system"), client.MatchingFields{"metadata.name": "aci-containers-config"})
 	if err != nil {
-		fmt.Printf("Error %s", err)
+		return controllers.AciCniConfig{}, errors.New(fmt.Sprintf("Error reading ConfigMap aci-containers-config %s", err))
 	}
+	// Get the name of the controller Pod
+	pods := &corev1.PodList{}
+	err = c.List(context.TODO(), pods, client.InNamespace("aci-containers-system"))
+	if err != nil {
+		return controllers.AciCniConfig{}, errors.New(fmt.Sprintf("Error reading Controller Pod %s", err))
+	}
+	podController := ""
+	for _, pod := range pods.Items {
+		if strings.Contains(pod.Name, "controller") {
+			podController = pod.Name
+			break
+		}
+	}
+	if podController == "" {
+		return controllers.AciCniConfig{}, errors.New(fmt.Sprintf(" Controller Pod not found"))
+	}
+	// Get the private key from the Controller Pod
+	execReq := r.Post().
+		Namespace("aci-containers-system").
+		Resource("pods").
+		Name(podController).
+		SubResource("exec").
+		VersionedParams(&corev1.PodExecOptions{
+			Command: []string{"/bin/sh", "-c", fmt.Sprintf("cat %s", gjson.Get(configMap.Items[0].Data["controller-config"], "apic-private-key-path").String())},
+			Stdin:   false,
+			Stdout:  true,
+			Stderr:  true,
+		}, runtime.NewParameterCodec(s))
+
+	exec, err := remotecommand.NewSPDYExecutor(rc, "POST", execReq.URL())
+	if err != nil {
+		return controllers.AciCniConfig{}, errors.New(fmt.Sprintf("Error setting up remote command %s", err))
+	}
+	cert := new(strings.Builder)
+	err = exec.Stream(remotecommand.StreamOptions{
+		Stdout: cert,
+		Stderr: os.Stderr,
+		Tty:    false,
+	})
+	if err != nil {
+		return controllers.AciCniConfig{}, errors.New(fmt.Sprintf("Error executing command on Controller Pod %s", err))
+	}
+
 	return controllers.AciCniConfig{
 		ApicIp:                        gjson.Get(configMap.Items[0].Data["controller-config"], "apic-hosts.1").String(),
 		ApicUsername:                  gjson.Get(configMap.Items[0].Data["controller-config"], "apic-username").String(),
+		ApicCertificate:               cert.String(),
 		KeyPath:                       gjson.Get(configMap.Items[0].Data["controller-config"], "apic-private-key-path").String(),
 		PodBridgeDomain:               strings.Replace(strings.Split(gjson.Get(configMap.Items[0].Data["controller-config"], "aci-podbd-dn").String(), "/")[2], "BD-", "", -1),
 		KubernetesVmmDomain:           gjson.Get(configMap.Items[0].Data["controller-config"], "aci-vmm-domain").String(),
 		ApplicationProfileKubeDefault: gjson.Get(configMap.Items[0].Data["host-agent-config"], "app-profile").String(),
 		EPGKubeDefault:                strings.Split(gjson.Get(configMap.Items[0].Data["host-agent-config"], "default-endpoint-group.name").String(), "|")[1],
-	}
+	}, nil
 }
 
 func main() {
@@ -101,19 +152,31 @@ func main() {
 		HealthProbeBindAddress: "0",
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "1d45f356.aci.cisco",
-		// Disabel cache for configMaps as we need to read ACI COnfiguration before starting the Manager/Controllers
-		ClientDisableCacheFor: []client.Object{&corev1.ConfigMap{}},
+		// Disable cache for configMaps/Pods as we need to read ACI Configuration before starting the Manager/Controllers
+		ClientDisableCacheFor: []client.Object{&corev1.ConfigMap{}, &corev1.Pod{}},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
-	fmt.Printf("%s\n", getApicInformation(mgr.GetClient()))
-	// apicClient, err := aci.NewApicClient(host, user, password)
-	// if err != nil {
-	// 	setupLog.Error(err, "unable to setup the Apic Client")
-	// 	os.Exit(1)
-	// }
+	gvk := schema.GroupVersionKind{
+		Group:   "",
+		Version: "v1",
+		Kind:    "Pod",
+	}
+
+	restClient, err := apiutil.RESTClientForGVK(gvk, false, mgr.GetConfig(), serializer.NewCodecFactory(mgr.GetScheme()))
+	cniConf, err := getApicInformation(mgr.GetClient(), restClient, mgr.GetConfig(), mgr.GetScheme())
+	if err != nil {
+		setupLog.Error(err, "unable to read ACI CNI configuration")
+	}
+	setupLog.Info(fmt.Sprintf("ACI CNI Configuration: %s", cniConf))
+
+	apicClient, err := aci.NewApicClient(cniConf.ApicIp, cniConf.ApicUsername, password, cniConf.ApicCertificate)
+	if err != nil {
+		setupLog.Error(err, "unable to setup the Apic Client")
+		os.Exit(1)
+	}
 
 	// if err = (&controllers.TenantReconciler{
 	// 	Client:     mgr.GetClient(),
@@ -131,14 +194,15 @@ func main() {
 	// 	setupLog.Error(err, "unable to create controller", "controller", "ApplicationProfile")
 	// 	os.Exit(1)
 	// }
-	// if err = (&controllers.SegmentationPolicyReconciler{
-	// 	Client:     mgr.GetClient(),
-	// 	Scheme:     mgr.GetScheme(),
-	// 	ApicClient: apicClient,
-	// }).SetupWithManager(mgr); err != nil {
-	// 	setupLog.Error(err, "unable to create controller", "controller", "SegmentationPolicy")
-	// 	os.Exit(1)
-	// }
+	if err = (&controllers.SegmentationPolicyReconciler{
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		ApicClient: apicClient,
+		CniConfig:  cniConf,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "SegmentationPolicy")
+		os.Exit(1)
+	}
 
 	//+kubebuilder:scaffold:builder
 
