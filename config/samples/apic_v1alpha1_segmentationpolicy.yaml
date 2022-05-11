@@ -3,28 +3,29 @@ kind: SegmentationPolicy
 metadata:
   name: segpol1
 spec:
-  tenant: k8s-operator
+  tenant: k8s-rke-aci-cni-pod-4
   namespaces:
     - ns1
     - ns2
-    - ns5
   rules:
-    - eth: arp
+    # - eth: ip
     - eth: ip
-      ip: udp
-      port: 53
+      ip: tcp
+      port: 80
+    - eth: ip
+      ip: tcp
+      port: 443
 ---
 apiVersion: apic.aci.cisco/v1alpha1
 kind: SegmentationPolicy
 metadata:
   name: segpol2
 spec:
-  tenant: k8s-operator
+  tenant: k8s-rke-aci-cni-pod-4
   namespaces:
     - ns2
     - ns3
     - ns4
-    - ns5
   rules:
     - eth: ip
       ip: tcp

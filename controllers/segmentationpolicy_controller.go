@@ -24,6 +24,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -49,6 +50,18 @@ type SegmentationPolicyReconciler struct {
 	client.Client
 	Scheme     *runtime.Scheme
 	ApicClient aci.ApicInterface
+	CniConfig  AciCniConfig
+}
+
+type AciCniConfig struct {
+	ApicIp                        string
+	ApicUsername                  string
+	ApicPrivateKey                string
+	KeyPath                       string
+	PodBridgeDomain               string
+	KubernetesVmmDomain           string
+	EPGKubeDefault                string
+	ApplicationProfileKubeDefault string
 }
 
 const (
@@ -58,7 +71,10 @@ const (
 //+kubebuilder:rbac:groups=apic.aci.cisco,resources=segmentationpolicies,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=apic.aci.cisco,resources=segmentationpolicies/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=apic.aci.cisco,resources=segmentationpolicies/finalizers,verbs=update
-//+kubebuilder:rbac:groups=apic.aci.cisco,resources=namespaces,verbs=get;list;watch;
+//+kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch;
+//+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;
+//+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;
+//+kubebuilder:rbac:groups="",resources=pods/exec,verbs=create;
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -149,7 +165,7 @@ func (r *SegmentationPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 func (r *SegmentationPolicyReconciler) nameSpaceSegPolicyMapFunc(object client.Object) []reconcile.Request {
 	modifiedNs := object.(*corev1.Namespace)
 	logger := log.FromContext(context.TODO())
-	logger.Info(fmt.Sprintf("Namespace %s modified", modifiedNs))
+	logger.Info(fmt.Sprintf("Namespace %s modified", modifiedNs.Name))
 	currentSegmentationPolicies := &v1alpha1.SegmentationPolicyList{}
 	err := r.List(context.TODO(), currentSegmentationPolicies)
 	if err != nil {
@@ -198,6 +214,7 @@ func (r *SegmentationPolicyReconciler) deleteSegPolicyFinalizerCallback(ctx cont
 		if len(annotations) == 1 && annotations[0] == segPolObject.Name {
 			logger.Info(fmt.Sprintf("Deleting EPG  %s", nsPol))
 			r.ApicClient.DeleteEndpointGroup(nsPol, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant)
+			r.RemoveAnnotationNamesapce(ctx, nsPol)
 			// If the EPG has more annotations, then remove the annotation that corresponds to the SegmentationPolicy, and stop consuming/providind the SegmentationPolicy's contract
 		} else if len(annotations) > 1 {
 			logger.Info(fmt.Sprintf("Removing annotation %s from EPG %s", segPolObject.Name, nsPol))
@@ -236,16 +253,30 @@ func (r *SegmentationPolicyReconciler) ReconcileNamespacesEpgs(ctx context.Conte
 			// If the EPG already exist, just add a new annotation. (An EPG/NS can be included in multiple policies)
 			logger.Info(fmt.Sprintf("Adding annotation to EPG  %s", ns))
 			r.ApicClient.AddTagAnnotationToEpg(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name, segPolObject.Name)
+			// TODO: Unit Test error if Contracts are consumed/provided after the 'if' statement
+			// Always consume/provide contracts
+			logger.Info(fmt.Sprintf("Consume & Provide Segmentation Policy contract for EPG %s", ns))
+			r.ApicClient.ConsumeContract(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name)
+			r.ApicClient.ProvideContract(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name)
 		} else {
 			// If not, create the EPG and add annotation
 			logger.Info(fmt.Sprintf("Creating EPG for Namespace %s", ns))
-			r.ApicClient.CreateEndpointGroup(ns, "", fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant)
+			r.ApicClient.CreateEndpointGroup(ns, "", fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, r.CniConfig.PodBridgeDomain, r.CniConfig.KubernetesVmmDomain)
+			// TODO: Unit Test error if Contracts are consumed/provided after the 'if' statement
+			// Always consume/provide contracts
+			logger.Info(fmt.Sprintf("Consume & Provide Segmentation Policy contract for EPG %s", ns))
+			r.ApicClient.ConsumeContract(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name)
+			r.ApicClient.ProvideContract(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name)
 			logger.Info(fmt.Sprintf("Adding annotation to EPG  %s", ns))
 			r.ApicClient.AddTagAnnotationToEpg(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name, segPolObject.Name)
+			logger.Info(fmt.Sprintf("Inheriting Contracts from ap-%s/epg-%s", r.CniConfig.ApplicationProfileKubeDefault, r.CniConfig.EPGKubeDefault))
+			r.ApicClient.InheritContractFromMaster(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, r.CniConfig.ApplicationProfileKubeDefault, r.CniConfig.EPGKubeDefault)
+			logger.Info(fmt.Sprintf("Annotation K8s Namespace"))
+			err := r.AnnotateNamespace(ctx, ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant)
+			if err != nil {
+				logger.Info(fmt.Sprintf("Error k8s annotation %s", err))
+			}
 		}
-		// Always consume/provide contracts
-		r.ApicClient.ConsumeContract(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name)
-		r.ApicClient.ProvideContract(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant, segPolObject.Name)
 	}
 
 	// Get EPGs configured on the APIC with the SegmentPolicy annotation
@@ -260,6 +291,7 @@ func (r *SegmentationPolicyReconciler) ReconcileNamespacesEpgs(ctx context.Conte
 		if len(annotations) == 1 && annotations[0] == segPolObject.Name {
 			logger.Info(fmt.Sprintf("Deleting EPG  %s", epg))
 			r.ApicClient.DeleteEndpointGroup(epg, fmt.Sprintf(ApplicationProfileNamePrefix, segPolObject.Spec.Tenant), segPolObject.Spec.Tenant)
+			r.RemoveAnnotationNamesapce(ctx, epg)
 			// If the EPG has more annotations, then remove the annotation that corresponds to the SegmentationPolicy, and stop consuming/providind the SegmentationPolicy's contract
 		} else if len(annotations) > 1 {
 			logger.Info(fmt.Sprintf("Removing annotation %s from EPG %s", segPolObject.Name, epg))
@@ -298,4 +330,33 @@ func (r *SegmentationPolicyReconciler) ReconcileRulesFilters(logger logr.Logger,
 		r.ApicClient.DeleteFilter(segPolObject.Spec.Tenant, fltApic)
 	}
 	return ctrl.Result{}, nil
+}
+
+func (r *SegmentationPolicyReconciler) AnnotateNamespace(ctx context.Context, nsName, appName, tenantName string) error {
+
+	dnJson := fmt.Sprintf(`{\"tenant\":\"%s\",\"app-profile\":\"%s\",\"name\":\"%s\"}`, tenantName, appName, nsName)
+	patch := []byte(fmt.Sprintf(`{"metadata":{"annotations":{"opflex.cisco.com/endpoint-group": "%s"}}}`, dnJson))
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: nsName,
+		},
+	}
+	if err := r.Client.Patch(ctx, ns, client.RawPatch(types.MergePatchType, patch)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *SegmentationPolicyReconciler) RemoveAnnotationNamesapce(ctx context.Context, nsName string) error {
+
+	patch := []byte(`{"metadata":{"annotations":{"opflex.cisco.com/endpoint-group": ""}}}`)
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: nsName,
+		},
+	}
+	if err := r.Client.Patch(ctx, ns, client.RawPatch(types.MergePatchType, patch)); err != nil {
+		return err
+	}
+	return nil
 }

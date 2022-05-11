@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/jgomezve/aci-operator/api/v1alpha1"
+	"github.com/jgomezve/aci-operator/pkg/aci"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -37,7 +38,6 @@ var _ = Describe("Segmentation Policy controller", func() {
 		SegmentationPolicyNamespace = "default"
 		SegmentationPolicyTenant    = "k8s-tenant"
 		timeout                     = time.Second * 10
-		duration                    = time.Second * 10
 		interval                    = time.Millisecond * 250
 	)
 
@@ -177,11 +177,26 @@ var _ = Describe("Segmentation Policy controller", func() {
 					}, timeout, interval).Should(BeTrue())
 				}
 			})
+			By("Checking EPG Configuration (VMM & BD)", func() {
+				for _, ns := range segPol1.Spec.Namespaces {
+					// Test only applies to the Mock!
+					epg := apicClient.(*aci.ApicClientMocks).GetEpg(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPol1.Spec.Tenant), segPol1.Spec.Tenant)
+					Expect(epg.Vmm).Should(Equal(cniConf.KubernetesVmmDomain))
+					Expect(epg.Bd).Should(Equal(cniConf.PodBridgeDomain))
+				}
+			})
 			By("Checking contracts consumed/provided by EPG", func() {
 				for _, ns := range segPol1.Spec.Namespaces {
 					contracts, _ := apicClient.GetContracts(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPol1.Spec.Tenant), segPol1.Spec.Tenant)
 					Expect(contracts["consumed"]).Should(Equal([]string{segPol1.Name}))
 					Expect(contracts["provided"]).Should(Equal([]string{segPol1.Name}))
+				}
+			})
+			By("Checking master EPG", func() {
+				for _, ns := range segPol1.Spec.Namespaces {
+					// Test only applies to the Mock!
+					epg := apicClient.(*aci.ApicClientMocks).GetEpg(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPol1.Spec.Tenant), segPol1.Spec.Tenant)
+					Expect(epg.Master).Should(Equal([]string{fmt.Sprintf("%s/%s", cniConf.ApplicationProfileKubeDefault, cniConf.EPGKubeDefault)}))
 				}
 			})
 		})
@@ -395,6 +410,14 @@ var _ = Describe("Segmentation Policy controller", func() {
 					},
 				}
 				Expect(k8sClient.Create(ctx, newNs)).Should(Succeed())
+				// Make sure the namespace is created
+				createdNs := &corev1.Namespace{}
+				nsLookupKey := types.NamespacedName{Name: "ns-e", Namespace: ""}
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, nsLookupKey, createdNs)
+					return err == nil
+				}, timeout, interval).Should(BeTrue())
+				Expect(createdNs.Name).Should(Equal("ns-e"))
 			})
 			By("Checking a EPG has been created", func() {
 				Eventually(func() bool {
@@ -402,10 +425,10 @@ var _ = Describe("Segmentation Policy controller", func() {
 					return exists
 				}, timeout, interval).Should(BeTrue())
 			})
-			By("Checking the EPG consumes/provides contract associated with the Segmenation Policy", func() {
+			By("Checking the EPG consumes/provides contract associated with the Segmentation Policy", func() {
 				contracts, _ := apicClient.GetContracts("ns-e", fmt.Sprintf(ApplicationProfileNamePrefix, segPol2.Spec.Tenant), segPol2.Spec.Tenant)
-				Expect(contracts["consumed"]).Should(Equal([]string{segPol2.Name}))
-				Expect(contracts["provided"]).Should(Equal([]string{segPol2.Name}))
+				Eventually(contracts["consumed"], timeout, interval).Should(Equal([]string{segPol2.Name}))
+				Eventually(contracts["provided"], timeout, interval).Should(Equal([]string{segPol2.Name}))
 			})
 			By("Checking EPG with the corresponding tags", func() {
 				tags, _ := apicClient.GetAnnotationsEpg("ns-f", fmt.Sprintf(ApplicationProfileNamePrefix, segPol2.Spec.Tenant), segPol2.Spec.Tenant)

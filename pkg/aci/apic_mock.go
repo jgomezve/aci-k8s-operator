@@ -10,8 +10,12 @@ type endpointGroup struct {
 	name      string
 	tnt       string
 	app       string
+	Bd        string
+	Vmm       string
 	tags      map[string]string
 	contracts map[string][]string
+	// Only one master
+	Master []string
 }
 
 type contract struct {
@@ -61,10 +65,10 @@ func (ac *ApicClientMocks) DeleteApplicationProfile(name, tenantName string) err
 	return nil
 }
 
-func (ac *ApicClientMocks) CreateEndpointGroup(name, description, appName, tenantName string) error {
+func (ac *ApicClientMocks) CreateEndpointGroup(name, description, appName, tenantName, bdName, vmmName string) error {
 	dn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, name)
 	fmt.Printf("Creating EPG %s \n", dn)
-	ac.endpointGroups[dn] = endpointGroup{name: name, app: appName, tnt: tenantName, tags: map[string]string{}, contracts: map[string][]string{}}
+	ac.endpointGroups[dn] = endpointGroup{name: name, app: appName, tnt: tenantName, Bd: bdName, Vmm: vmmName, tags: map[string]string{}, contracts: map[string][]string{}, Master: []string{}}
 	return nil
 }
 
@@ -104,6 +108,7 @@ func (ac *ApicClientMocks) ProvideContract(epgName, appName, tenantName, conName
 
 func (ac *ApicClientMocks) GetContracts(epgName, appName, tenantName string) (map[string][]string, error) {
 	dn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, epgName)
+	fmt.Printf("Contracts consumed/provided by EPG %s : %s\n", dn, ac.endpointGroups[dn].contracts)
 	return ac.endpointGroups[dn].contracts, nil
 }
 
@@ -121,6 +126,14 @@ func (ac *ApicClientMocks) DeleteContractProvider(epgName, appName, tenantName, 
 	return nil
 }
 
+func (ac *ApicClientMocks) InheritContractFromMaster(epgName, appName, tenantName, appMasterName, epgMasterName string) error {
+	dn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, epgName)
+	fmt.Printf("EPG %s inheriting contract from master %s/%s \n", dn, appMasterName, epgMasterName)
+	currentEpgConf := ac.endpointGroups[dn]
+	currentEpgConf.Master = append(currentEpgConf.Master, fmt.Sprintf("%s/%s", appMasterName, epgMasterName))
+	ac.endpointGroups[dn] = currentEpgConf
+	return nil
+}
 func (ac *ApicClientMocks) AddTagAnnotationToEpg(name, appName, tenantName, key, value string) error {
 	dn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, name)
 	fmt.Printf("Add Annotation {%s:%s} to EPG %s\n", key, value, dn)
@@ -163,6 +176,13 @@ func (ac *ApicClientMocks) GetAnnotationsEpg(name, appName, tenantName string) (
 		keys = append(keys, k)
 	}
 	return keys, nil
+}
+
+// Function only available in the Mock
+func (ac *ApicClientMocks) GetEpg(name, appName, tenantName string) endpointGroup {
+	dn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, name)
+	fmt.Printf("Getting EPG %s \n", dn)
+	return ac.endpointGroups[dn]
 }
 
 func (ac *ApicClientMocks) DeleteFilter(tenantName, name string) error {
