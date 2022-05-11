@@ -4,7 +4,7 @@
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/jgomezve/aci-k8s-operator)
 ![Kubernetes version](https://img.shields.io/badge/kubernetes-1.23%2B-blue)
 
-Automate the configuration of the network policies on the [APIC](https://www.cisco.com/c/en/us/products/cloud-systems-management/application-policy-infrastructure-controller-apic/index.html) by declaring straightforward segmentation policies as [Kubernetes](https://kubernetes.io/) resources. This repository contains a [Kubernetes Operator](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/) used to manage  a Custom Resource named `SegmentationPolicy`, which enforces [Namespace](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/) segmentation from the ACI Fabric by configuring the correspondig Objects (Contracts, Filters, EPGs) on the APIC controller.
+Automate the configuration of the network policies on the [APIC](https://www.cisco.com/c/en/us/products/cloud-systems-management/application-policy-infrastructure-controller-apic/index.html) by declaring straightforward segmentation policies as [Kubernetes](https://kubernetes.io/) resources. This repository contains a [Kubernetes Operator](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/) used to manage a Custom Resource named `SegmentationPolicy`, which enforces [Namespace](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/) segmentation from the ACI Fabric by configuring the correspondig Objects (Contracts, Filters, EPGs) on the APIC controller.
 
 <p align="center">
 <img src="docs/images/aci-k8s-operator.png"  border="0" width="500">
