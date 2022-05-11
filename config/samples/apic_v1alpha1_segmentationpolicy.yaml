@@ -3,7 +3,6 @@ kind: SegmentationPolicy
 metadata:
   name: segpol1
 spec:
-  tenant: k8s-rke-aci-cni-pod-4
   namespaces:
     - ns1
     - ns2
@@ -21,7 +20,6 @@ kind: SegmentationPolicy
 metadata:
   name: segpol2
 spec:
-  tenant: k8s-rke-aci-cni-pod-4
   namespaces:
     - ns2
     - ns3
