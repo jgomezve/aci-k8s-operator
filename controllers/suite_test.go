@@ -92,7 +92,12 @@ var _ = BeforeSuite(func() {
 
 	apicClient = &aci.ApicMockClient
 	Expect(apicClient).NotTo(BeNil())
-	cniConf = AciCniConfig{PodBridgeDomain: "my-test-bd", KubernetesVmmDomain: "my-test-k8s-vmm", EPGKubeDefault: "my-test-epg", ApplicationProfileKubeDefault: "my-test-app"}
+	cniConf = AciCniConfig{
+		PodBridgeDomain:               "my-test-bd",
+		PolicyTenant:                  "my-test-tenant",
+		KubernetesVmmDomain:           "my-test-k8s-vmm",
+		EPGKubeDefault:                "my-test-epg",
+		ApplicationProfileKubeDefault: "my-test-app"}
 
 	err = (&SegmentationPolicyReconciler{
 		Client:     k8sManager.GetClient(),

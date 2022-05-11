@@ -18,7 +18,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -70,13 +69,13 @@ func getApicInformation(c client.Client, r rest.Interface, rc *rest.Config, s *r
 	configMap := &corev1.ConfigMapList{}
 	err := c.List(context.TODO(), configMap, client.InNamespace("aci-containers-system"), client.MatchingFields{"metadata.name": "aci-containers-config"})
 	if err != nil {
-		return controllers.AciCniConfig{}, errors.New(fmt.Sprintf("Error reading ConfigMap aci-containers-config %s", err))
+		return controllers.AciCniConfig{}, fmt.Errorf(fmt.Sprintf("Error reading ConfigMap aci-containers-config %s", err))
 	}
 	// Get the name of the controller Pod
 	pods := &corev1.PodList{}
 	err = c.List(context.TODO(), pods, client.InNamespace("aci-containers-system"))
 	if err != nil {
-		return controllers.AciCniConfig{}, errors.New(fmt.Sprintf("Error reading Controller Pod %s", err))
+		return controllers.AciCniConfig{}, fmt.Errorf(fmt.Sprintf("Error reading Controller Pod %s", err))
 	}
 	podController := ""
 	for _, pod := range pods.Items {
@@ -86,7 +85,7 @@ func getApicInformation(c client.Client, r rest.Interface, rc *rest.Config, s *r
 		}
 	}
 	if podController == "" {
-		return controllers.AciCniConfig{}, errors.New(fmt.Sprintf(" Controller Pod not found"))
+		return controllers.AciCniConfig{}, fmt.Errorf(" Controller Pod not found")
 	}
 	// Get the private key from the Controller Pod
 	execReq := r.Post().
@@ -103,7 +102,7 @@ func getApicInformation(c client.Client, r rest.Interface, rc *rest.Config, s *r
 
 	exec, err := remotecommand.NewSPDYExecutor(rc, "POST", execReq.URL())
 	if err != nil {
-		return controllers.AciCniConfig{}, errors.New(fmt.Sprintf("Error setting up remote command %s", err))
+		return controllers.AciCniConfig{}, fmt.Errorf(fmt.Sprintf("Error setting up remote command %s", err))
 	}
 	cert := new(strings.Builder)
 	err = exec.Stream(remotecommand.StreamOptions{
@@ -112,7 +111,7 @@ func getApicInformation(c client.Client, r rest.Interface, rc *rest.Config, s *r
 		Tty:    false,
 	})
 	if err != nil {
-		return controllers.AciCniConfig{}, errors.New(fmt.Sprintf("Error executing command on Controller Pod %s", err))
+		return controllers.AciCniConfig{}, fmt.Errorf(fmt.Sprintf("Error executing command on Controller Pod %s", err))
 	}
 
 	return controllers.AciCniConfig{
@@ -120,6 +119,7 @@ func getApicInformation(c client.Client, r rest.Interface, rc *rest.Config, s *r
 		ApicUsername:                  gjson.Get(configMap.Items[0].Data["controller-config"], "apic-username").String(),
 		ApicPrivateKey:                cert.String(),
 		KeyPath:                       gjson.Get(configMap.Items[0].Data["controller-config"], "apic-private-key-path").String(),
+		PolicyTenant:                  gjson.Get(configMap.Items[0].Data["controller-config"], "aci-policy-tenant").String(),
 		PodBridgeDomain:               strings.Replace(strings.Split(gjson.Get(configMap.Items[0].Data["controller-config"], "aci-podbd-dn").String(), "/")[2], "BD-", "", -1),
 		KubernetesVmmDomain:           gjson.Get(configMap.Items[0].Data["controller-config"], "aci-vmm-domain").String(),
 		ApplicationProfileKubeDefault: gjson.Get(configMap.Items[0].Data["host-agent-config"], "app-profile").String(),
@@ -164,7 +164,7 @@ func main() {
 		Kind:    "Pod",
 	}
 
-	restClient, err := apiutil.RESTClientForGVK(gvk, false, mgr.GetConfig(), serializer.NewCodecFactory(mgr.GetScheme()))
+	restClient, _ := apiutil.RESTClientForGVK(gvk, false, mgr.GetConfig(), serializer.NewCodecFactory(mgr.GetScheme()))
 	cniConf, err := getApicInformation(mgr.GetClient(), restClient, mgr.GetConfig(), mgr.GetScheme())
 	if err != nil {
 		setupLog.Error(err, "unable to read ACI CNI configuration")
