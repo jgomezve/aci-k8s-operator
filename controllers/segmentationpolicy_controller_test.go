@@ -179,7 +179,7 @@ var _ = Describe("Segmentation Policy controller", func() {
 			})
 			By("Checking EPG Configuration (VMM & BD)", func() {
 				for _, ns := range segPol1.Spec.Namespaces {
-					// Test only applies for the Mock!
+					// Test only applies to the Mock!
 					epg := apicClient.(*aci.ApicClientMocks).GetEpg(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPol1.Spec.Tenant), segPol1.Spec.Tenant)
 					Expect(epg.Vmm).Should(Equal(cniConf.KubernetesVmmDomain))
 					Expect(epg.Bd).Should(Equal(cniConf.PodBridgeDomain))
@@ -194,7 +194,7 @@ var _ = Describe("Segmentation Policy controller", func() {
 			})
 			By("Checking master EPG", func() {
 				for _, ns := range segPol1.Spec.Namespaces {
-					// Test only applies for the Mock!
+					// Test only applies to the Mock!
 					epg := apicClient.(*aci.ApicClientMocks).GetEpg(ns, fmt.Sprintf(ApplicationProfileNamePrefix, segPol1.Spec.Tenant), segPol1.Spec.Tenant)
 					Expect(epg.Master).Should(Equal([]string{fmt.Sprintf("%s/%s", cniConf.ApplicationProfileKubeDefault, cniConf.EPGKubeDefault)}))
 				}

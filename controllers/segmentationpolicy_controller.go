@@ -333,7 +333,7 @@ func (r *SegmentationPolicyReconciler) ReconcileRulesFilters(logger logr.Logger,
 }
 
 func (r *SegmentationPolicyReconciler) AnnotateNamespace(ctx context.Context, nsName, appName, tenantName string) error {
-	//patch := []byte(fmt.Sprintf(`{"metadata":{"annotations":{"opflex.cisco.com/endpoint-group": "'{"tenant":"%s","app-profile":"%s","name":"%s"}'"}}}`, tenantName, appName, nsName))
+
 	dnJson := fmt.Sprintf(`{\"tenant\":\"%s\",\"app-profile\":\"%s\",\"name\":\"%s\"}`, tenantName, appName, nsName)
 	patch := []byte(fmt.Sprintf(`{"metadata":{"annotations":{"opflex.cisco.com/endpoint-group": "%s"}}}`, dnJson))
 	ns := &corev1.Namespace{
@@ -348,7 +348,6 @@ func (r *SegmentationPolicyReconciler) AnnotateNamespace(ctx context.Context, ns
 }
 
 func (r *SegmentationPolicyReconciler) RemoveAnnotationNamesapce(ctx context.Context, nsName string) error {
-	//patch := []byte(fmt.Sprintf(`{"metadata":{"annotations":{"opflex.cisco.com/endpoint-group": "'{"tenant":"%s","app-profile":"%s","name":"%s"}'"}}}`, tenantName, appName, nsName))
 
 	patch := []byte(`{"metadata":{"annotations":{"opflex.cisco.com/endpoint-group": ""}}}`)
 	ns := &corev1.Namespace{
