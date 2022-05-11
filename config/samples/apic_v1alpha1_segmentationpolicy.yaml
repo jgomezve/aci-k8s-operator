@@ -7,7 +7,6 @@ spec:
     - ns1
     - ns2
   rules:
-    # - eth: ip
     - eth: ip
       ip: tcp
       port: 80
