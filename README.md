@@ -52,80 +52,80 @@ segmentationpolicies.apic.aci.cisco     2022-04-19T15:58:11Z
 The `install` target configures the manifest located in `config/crd/bases/apic.aci.cisco_segmentationpolicies.yaml`
 
 <details>
-  <summary> SegmentationPolicy CRD</summary>
-  
+  <summary> <code>SegmentationPolicy CRD</code></summary>
   ```yaml
-      ---
-      apiVersion: apiextensions.k8s.io/v1
-      kind: CustomResourceDefinition
-      metadata:
+    ---
+    apiVersion: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    metadata:
       annotations:
-      controller-gen.kubebuilder.io/version: v0.8.0
+        controller-gen.kubebuilder.io/version: v0.8.0
       creationTimestamp: null
       name: segmentationpolicies.apic.aci.cisco
-      spec:
+    spec:
       group: apic.aci.cisco
       names:
-      kind: SegmentationPolicy
-      listKind: SegmentationPolicyList
-      plural: segmentationpolicies
-      singular: segmentationpolicy
+        kind: SegmentationPolicy
+        listKind: SegmentationPolicyList
+        plural: segmentationpolicies
+        singular: segmentationpolicy
       scope: Namespaced
       versions:
       - name: v1alpha1
-      schema:
-            openAPIV3Schema:
+        schema:
+          openAPIV3Schema:
             description: SegmentationPolicy is the Schema for the segmentationpolicies
-            API
+              API
             properties:
-            apiVersion:
-                  description: 'APIVersion defines the versioned schema of this representation
+              apiVersion:
+                description: 'APIVersion defines the versioned schema of this representation
                   of an object. Servers should convert recognized schemas to the latest
                   internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-                  type: string
-            kind:
-                  description: 'Kind is a string value representing the REST resource this
+                type: string
+              kind:
+                description: 'Kind is a string value representing the REST resource this
                   object represents. Servers may infer this from the endpoint the client
                   submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-                  type: string
-            metadata:
-                  type: object
-            spec:
-                  description: SegmentationPolicySpec defines the desired state of SegmentationPolicy
-                  properties:
+                type: string
+              metadata:
+                type: object
+              spec:
+                description: SegmentationPolicySpec defines the desired state of SegmentationPolicy
+                properties:
                   namespaces:
-                  items:
-                        type: string
-                  type: array
+                    items:
+                      type: string
+                    type: array
                   rules:
-                  items:
-                        properties:
+                    items:
+                      properties:
                         eth:
-                        type: string
+                          type: string
                         ip:
-                        type: string
+                          type: string
                         port:
-                        type: integer
-                        type: object
-                  type: array
-                  required:
-                  - namespaces
-                  - rules
-                  type: object
-            status:
-                  description: SegmentationPolicyStatus defines the observed state of SegmentationPolicy
-                  type: object
+                          type: integer
+                      type: object
+                    type: array
+                required:
+                - namespaces
+                - rules
+                type: object
+              status:
+                description: SegmentationPolicyStatus defines the observed state of SegmentationPolicy
+                type: object
             type: object
-      served: true
-      storage: true
-      subresources:
-            status: {}
-      status:
+        served: true
+        storage: true
+        subresources:
+          status: {}
+    status:
       acceptedNames:
-      kind: ""
-      plural: ""
+        kind: ""
+        plural: ""
       conditions: []
       storedVersions: []
+
   ```
 </details>
 
