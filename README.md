@@ -40,7 +40,7 @@ This repository has been scaffolded using [Kubebuilder](https://book.kubebuilder
       cd aci-k8s-operator
 
 
-### Configure the CRD `SegmentationPolicy`
+### 2. Configure the CRD `SegmentationPolicy`
 
 * Configure the Custom Resource Definition (CRD) `SegmentationPolicy` on the Kubernetes clusters
 
@@ -134,7 +134,7 @@ The `install` target configures the manifest located in `config/crd/bases/apic.a
 </details>
 
 
-### Start the operator
+### 3. Start the operator
  
 The operator requires read/write access privileges the Kubernetes cluster and the APIC controller. During the start-up phase, the Operator discovers APIC configuration parameters from the `ConfigMap` `aci-containers-config`. This `ConfigMap` is automatically deployed during the installation of the ACI CNI. 
 
@@ -163,7 +163,7 @@ This is the prefered method for development environments. Make sure Go >=1.17 is
 1.6523912326504896e+09	INFO	controller.segmentationpolicy	Starting workers	{"reconciler group": "apic.aci.cisco", "reconciler kind": "SegmentationPolicy", "worker count": 1}
 ```
 
-### Option 2: Operator running inside of the K8s Cluster as a Container/Pod
+#### Option 2: Operator running inside of the K8s Cluster as a Container/Pod
       
 This is the preferred method for production environments. The operator runs as a containerized application inside a Container/`Pod`. A `ClusterRole` and corresponding `ClusterRoleBinding` objects are configured to ensure that the Pod has the required permissions to read/write the Kubernetes API. Based on best-practices, a `Deployment` in a dedicated `Namespace` managed the `Pod` hosting the Operating application
 
