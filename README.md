@@ -138,7 +138,6 @@ The `install` target configures the manifest located in `config/crd/bases/apic.a
  
 The operator requires connectivity and read/write access privileges the Kubernetes cluster and the APIC controller
 
-
 #### Option 1: Operator running outside of the K8s Cluster
 
 This is the prefered method for development environments. Make sure Go >=1.17 is installed on the hosting machine
@@ -152,14 +151,18 @@ This is the prefered method for development environments. Make sure Go >=1.17 is
       go run ./main.go
 
 ```
-1.6509721382001133e+09	INFO	setup	starting manager
-1.6509721382004604e+09	INFO	controller.segmentationpolicy	Starting EventSource	{"reconciler group": "apic.aci.cisco", "reconciler kind": "SegmentationPolicy", "source": "kind source: *v1alpha1.SegmentationPolicy"}
-1.650972138200524e+09	INFO	controller.segmentationpolicy	Starting EventSource	{"reconciler group": "apic.aci.cisco", "reconciler kind": "SegmentationPolicy", "source": "kind source: *v1.Namespace"}
-1.6509721382005382e+09	INFO	controller.segmentationpolicy	Starting Controller	{"reconciler group": "apic.aci.cisco", "reconciler kind": "SegmentationPolicy"}
-1.6509721383018e+09	INFO	controller.segmentationpolicy	Starting workers	{"reconciler group": "apic.aci.cisco", "reconciler kind": "SegmentationPolicy", "worker count": 1}
+1.6523912324578347e+09	INFO	setup	ACI CNI configuration discovered for tenant k8s-rke-aci-cni-pod-4 in APIC controller 172.20.91.9
+1.6523912325494506e+09	INFO	setup	starting manager
+1.6523912325497773e+09	INFO	controller.segmentationpolicy	Starting EventSource	{"reconciler group": "apic.aci.cisco", "reconciler kind": "SegmentationPolicy", "source": "kind source: *v1alpha1.SegmentationPolicy"}
+1.6523912325498345e+09	INFO	controller.segmentationpolicy	Starting EventSource	{"reconciler group": "apic.aci.cisco", "reconciler kind": "SegmentationPolicy", "source": "kind source: *v1.Namespace"}
+1.6523912325498483e+09	INFO	controller.segmentationpolicy	Starting Controller	{"reconciler group": "apic.aci.cisco", "reconciler kind": "SegmentationPolicy"}
+1.6523912326504896e+09	INFO	controller.segmentationpolicy	Starting workers	{"reconciler group": "apic.aci.cisco", "reconciler kind": "SegmentationPolicy", "worker count": 1}
 ```
-### Option 2: Operator running as a Container in the K8s Cluster
+### Option 2: Operator running inside of the K8s Cluster as a Container/Pod
       
+This is the preferred method for production environments. The operator runs as a containerized application inside a Container/Pod. A `ClusterRole` and corresponding `ClusterRoleBinding` objects are required to ensure that the Pod has read/write access to the Kubernetes API. It is also a best-practice to run the Pod in a dedicated `Namespace`
+
+
       make deploy
 
 ## Usage 
