@@ -28,8 +28,6 @@ type SegmentationPolicySpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	//+kubebuilder:validation:MinLength=0
-	Tenant     string     `json:"tenant"`
 	Namespaces []string   `json:"namespaces"`
 	Rules      []RuleSpec `json:"rules"`
 }

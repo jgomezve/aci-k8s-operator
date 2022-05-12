@@ -24,13 +24,14 @@ type ApicInterface interface {
 	DeleteTenant(name string) error
 	CreateApplicationProfile(name, description, tenantName string) error
 	DeleteApplicationProfile(name, tenantName string) error
-	CreateEndpointGroup(name, description, appName, tenantName string) error
+	CreateEndpointGroup(name, description, appName, tenantName, bdName, vmmName string) error
 	DeleteEndpointGroup(name, appName, tenantName string) error
 	CreateFilterAndFilterEntry(tenantName, name, eth, ip string, port int) error
 	DeleteFilter(tenantName, name string) error
 	FilterExists(name, tenantName string) (bool, error)
 	CreateContract(tenantName, name string, filters []string) error
 	DeleteContract(tenantName, name string) error
+	InheritContractFromMaster(epgName, appName, tenantName, appMasterName, epgMasterName string) error
 	EpgExists(name, appName, tenantName string) (bool, error)
 	AddTagAnnotationToEpg(name, appName, tenantName, key, value string) error
 	RemoveTagAnnotation(name, appName, tenantName, key string) error
@@ -47,17 +48,32 @@ type ApicInterface interface {
 	GetContracts(epgName, appName, tenantName string) (map[string][]string, error)
 }
 
-func NewApicClient(host, user, password string) (*ApicClient, error) {
-	ac := &ApicClient{
-		host:     host,
-		user:     user,
-		password: password,
-		client:   client.GetClient(fmt.Sprintf("https://%s/", host), user, client.Password(password), client.Insecure(true), client.SkipLoggingPayload(true)),
+func NewApicClient(host, user, password, privateKey string) (*ApicClient, error) {
+	if privateKey == "" {
+		ac := &ApicClient{
+			host:     host,
+			user:     user,
+			password: password,
+			client:   client.GetClient(fmt.Sprintf("https://%s/", host), user, client.Password(password), client.Insecure(true), client.SkipLoggingPayload(true)),
+		}
+		return ac, ac.client.Authenticate()
+	} else {
+		ac := &ApicClient{
+			host:     host,
+			user:     user,
+			password: password,
+			client:   client.GetClient(fmt.Sprintf("https://%s/", host), user, client.PrivateKey(privateKey), client.AdminCert(fmt.Sprintf("%s.crt", user)), client.Insecure(true), client.SkipLoggingPayload(true)),
+		}
+		// Test the client
+		_, err := ac.client.ListSystem()
+		return ac, err
 	}
 	// TODO: Re-use connection
-	return ac, nil
 }
 
+/*
+	Tenant Function
+*/
 func (ac *ApicClient) CreateTenant(name, description string) error {
 	fvTenantAttr := models.TenantAttributes{}
 	fvTenant := models.NewTenant(fmt.Sprintf("tn-%s", name), "uni", description, fvTenantAttr)
@@ -76,6 +92,9 @@ func (ac *ApicClient) DeleteTenant(name string) error {
 	return nil
 }
 
+/*
+	Application Profile function
+*/
 func (ac *ApicClient) CreateApplicationProfile(name, description, tenantName string) error {
 	fvAppAttr := models.ApplicationProfileAttributes{}
 	fvAppAttr.Annotation = "orchestrator:kubernetes"
@@ -98,18 +117,23 @@ func (ac *ApicClient) DeleteApplicationProfile(name, tenantName string) error {
 	return nil
 }
 
-func (ac *ApicClient) CreateEndpointGroup(name, description, appName, tenantName string) error {
+/*
+	Endpoint Groups functions
+*/
+func (ac *ApicClient) CreateEndpointGroup(name, description, appName, tenantName, bdName, vmmName string) error {
 
 	fvAEpgAttr := models.ApplicationEPGAttributes{}
 	fvAEpgAttr.Annotation = "orchestrator:kubernetes"
 	fvAEpg := models.NewApplicationEPG(fmt.Sprintf("epg-%s", name), fmt.Sprintf("uni/tn-%s/ap-%s", tenantName, appName), description, fvAEpgAttr)
 
-	err := ac.client.Save(fvAEpg)
-	if err != nil {
+	if err := ac.client.Save(fvAEpg); err != nil {
 		return err
 	}
-
-	if err != nil {
+	if err := ac.client.CreateRelationfvRsBdFromApplicationEPG(fvAEpg.DistinguishedName, bdName); err != nil {
+		return err
+	}
+	tDn := fmt.Sprintf("uni/vmmp-Kubernetes/dom-%s", vmmName)
+	if err := ac.client.CreateRelationfvRsDomAttFromApplicationEPG(fvAEpg.DistinguishedName, tDn); err != nil {
 		return err
 	}
 	return nil
@@ -240,6 +264,19 @@ func (ac *ApicClient) DeleteContractProvider(epgName, appName, tenantName, conNa
 	return ac.client.DeleteContractProvider(conName, epgName, appName, tenantName)
 }
 
+func (ac *ApicClient) InheritContractFromMaster(epgName, appName, tenantName, appMasterName, epgMasterName string) error {
+
+	epgDn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, epgName)
+	tDn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appMasterName, epgMasterName)
+	if err := ac.client.CreateRelationfvRsSecInheritedFromApplicationEPG(epgDn, tDn); err != nil {
+		return err
+	}
+	return nil
+}
+
+/*
+	Contract functions
+*/
 func (ac *ApicClient) CreateContract(tenantName, name string, filters []string) error {
 	vzBrCPAttr := models.ContractAttributes{}
 	vzBrCPAttr.Name = name
