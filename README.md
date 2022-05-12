@@ -30,7 +30,7 @@ Even though the ACI-CNI allows Kubernetes Administrators to map Namespaces/Deplo
 
 ## Installation
 
-This repository has been scaffolded using [Kubebuilder](https://book.kubebuilder.io/introduction.html). Projects created by Kubebuilder contain a [Makefile](https://www.gnu.org/software/make/) that will install tools at versions defined at creation time. Those tools are: 
+This repository has been scaffolded using [Kubebuilder](https://book.kubebuilder.io/introduction.html). Projects created by Kubebuilder contain a [Makefile](https://www.gnu.org/software/make/) that automates the deployment of Kubernetes Resoruces. The make file also leverages [Kustomize](https://kustomize.io/) to dynamically generate Kubernetes manifests
 
 **Your Kubernetes cluster must have already been configured to use the Cisco ACI CNI**
 
@@ -136,7 +136,11 @@ The `install` target configures the manifest located in `config/crd/bases/apic.a
 
 ### Start the operator
  
-The operator requires connectivity and read/write access privileges the Kubernetes cluster and the APIC controller
+The operator requires read/write access privileges the Kubernetes cluster and the APIC controller. During the start-up phase, the Operator discovers APIC configuration parameters from the `ConfigMap` `aci-containers-config`. This `ConfigMap` is automatically deployed during the installation of the ACI CNI. 
+
+The information discovered  during the start-up pahse includes the username and private key later used by the Operator to configure the APIC. 
+
+> **Note**:  The `ConfigMap` is deployed in the `Namespace` `aci-containers-system`
 
 #### Option 1: Operator running outside of the K8s Cluster
 
@@ -148,7 +152,7 @@ This is the prefered method for development environments. Make sure Go >=1.17 is
 
 * Compile the code and execute the binary file 
 
-      go run ./main.go
+      make run
 
 ```
 1.6523912324578347e+09	INFO	setup	ACI CNI configuration discovered for tenant k8s-rke-aci-cni-pod-4 in APIC controller 172.20.91.9
@@ -158,12 +162,44 @@ This is the prefered method for development environments. Make sure Go >=1.17 is
 1.6523912325498483e+09	INFO	controller.segmentationpolicy	Starting Controller	{"reconciler group": "apic.aci.cisco", "reconciler kind": "SegmentationPolicy"}
 1.6523912326504896e+09	INFO	controller.segmentationpolicy	Starting workers	{"reconciler group": "apic.aci.cisco", "reconciler kind": "SegmentationPolicy", "worker count": 1}
 ```
+
 ### Option 2: Operator running inside of the K8s Cluster as a Container/Pod
       
-This is the preferred method for production environments. The operator runs as a containerized application inside a Container/Pod. A `ClusterRole` and corresponding `ClusterRoleBinding` objects are required to ensure that the Pod has read/write access to the Kubernetes API. It is also a best-practice to run the Pod in a dedicated `Namespace`
+This is the preferred method for production environments. The operator runs as a containerized application inside a Container/`Pod`. A `ClusterRole` and corresponding `ClusterRoleBinding` objects are configured to ensure that the Pod has the required permissions to read/write the Kubernetes API. Based on best-practices, a `Deployment` in a dedicated `Namespace` managed the `Pod` hosting the Operating application
 
 
-      make deploy
+Connectivity from the Operator's Pod to the APIC controller can satisfied by any of the following options:
+
+      * `SNAT Policy` 
+      * `LoadBalancer`
+
+*  Deploy the Operator on the Kubernetes Cluster
+
+      make deploy 
+
+```
+namespace/aci-operator-system created
+customresourcedefinition.apiextensions.k8s.io/segmentationpolicies.apic.aci.cisco created
+serviceaccount/aci-operator-controller-manager created
+role.rbac.authorization.k8s.io/aci-operator-leader-election-role created
+clusterrole.rbac.authorization.k8s.io/aci-operator-manager-role created
+clusterrole.rbac.authorization.k8s.io/aci-operator-metrics-reader created
+clusterrole.rbac.authorization.k8s.io/aci-operator-proxy-role created
+rolebinding.rbac.authorization.k8s.io/aci-operator-leader-election-rolebinding created
+clusterrolebinding.rbac.authorization.k8s.io/aci-operator-manager-rolebinding created
+clusterrolebinding.rbac.authorization.k8s.io/aci-operator-proxy-rolebinding created
+configmap/aci-operator-manager-config created
+service/aci-operator-controller-manager-metrics-service created
+deployment.apps/aci-operator-controller-manager created
+```
+
+*  Check the Controler status
+
+```
+$ kubectl get pod -n aci-operator-system
+NAME                                              READY   STATUS    RESTARTS   AGE
+aci-operator-controller-manager-55d9777c9-89vh4   2/2     Running   0          14m
+```
 
 ## Usage 
 
