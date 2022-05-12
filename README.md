@@ -34,116 +34,122 @@ This repository has been scaffolded using [Kubebuilder](https://book.kubebuilder
 
 **Your Kubernetes cluster must have already been configured to use the Cisco ACI CNI**
 
-* Clone this repository
+### 1. Clone this repository
 
       git clone https://github.com/jgomezve/aci-k8s-operator
       cd aci-k8s-operator
 
-* Configure the Custom Resource Definition (CRD)  `SegmentationPolicy` on the Kubernetes clusters
+
+### Configure the CRD `SegmentationPolicy`
+
+* Configure the Custom Resource Definition (CRD) `SegmentationPolicy` on the Kubernetes clusters
 
       make install
 
-      ```
-      $ kubectl get crd
-      NAME                                    CREATED AT
-      segmentationpolicies.apic.aci.cisco     2022-04-19T15:58:11Z
-      ```
+```
+$ kubectl get crd
+NAME                                    CREATED AT
+segmentationpolicies.apic.aci.cisco     2022-04-19T15:58:11Z
+```
 
-      The `install` target configures the manifest located in `config/crd/bases/apic.aci.cisco_segmentationpolicies.yaml`
+The `install` target configures the manifest located in `config/crd/bases/apic.aci.cisco_segmentationpolicies.yaml`
 
-      <details>
-      <summary> <code>SegmentationPolicy</code> CRD</summary>
+<details>
+  <summary> <code>SegmentationPolicy</code> CRD</summary>
+  
+  ```yaml
+    ---
+    apiVersion: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    metadata:
+      annotations:
+        controller-gen.kubebuilder.io/version: v0.8.0
+      creationTimestamp: null
+      name: segmentationpolicies.apic.aci.cisco
+    spec:
+      group: apic.aci.cisco
+      names:
+        kind: SegmentationPolicy
+        listKind: SegmentationPolicyList
+        plural: segmentationpolicies
+        singular: segmentationpolicy
+      scope: Namespaced
+      versions:
+      - name: v1alpha1
+        schema:
+          openAPIV3Schema:
+            description: SegmentationPolicy is the Schema for the segmentationpolicies
+              API
+            properties:
+              apiVersion:
+                description: 'APIVersion defines the versioned schema of this representation
+                  of an object. Servers should convert recognized schemas to the latest
+                  internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                type: string
+              kind:
+                description: 'Kind is a string value representing the REST resource this
+                  object represents. Servers may infer this from the endpoint the client
+                  submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                type: string
+              metadata:
+                type: object
+              spec:
+                description: SegmentationPolicySpec defines the desired state of SegmentationPolicy
+                properties:
+                  namespaces:
+                    items:
+                      type: string
+                    type: array
+                  rules:
+                    items:
+                      properties:
+                        eth:
+                          type: string
+                        ip:
+                          type: string
+                        port:
+                          type: integer
+                      type: object
+                    type: array
+                required:
+                - namespaces
+                - rules
+                type: object
+              status:
+                description: SegmentationPolicyStatus defines the observed state of SegmentationPolicy
+                type: object
+            type: object
+        served: true
+        storage: true
+        subresources:
+          status: {}
+    status:
+      acceptedNames:
+        kind: ""
+        plural: ""
+      conditions: []
+      storedVersions: []
 
-      ```yaml
-      ---
-      apiVersion: apiextensions.k8s.io/v1
-      kind: CustomResourceDefinition
-      metadata:
-        annotations:
-          controller-gen.kubebuilder.io/version: v0.8.0
-        creationTimestamp: null
-        name: segmentationpolicies.apic.aci.cisco
-      spec:
-        group: apic.aci.cisco
-        names:
-          kind: SegmentationPolicy
-          listKind: SegmentationPolicyList
-          plural: segmentationpolicies
-          singular: segmentationpolicy
-        scope: Namespaced
-        versions:
-        - name: v1alpha1
-          schema:
-            openAPIV3Schema:
-              description: SegmentationPolicy is the Schema for the segmentationpolicies
-                API
-              properties:
-                apiVersion:
-                  description: 'APIVersion defines the versioned schema of this representation
-                    of an object. Servers should convert recognized schemas to the latest
-                    internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-                  type: string
-                kind:
-                  description: 'Kind is a string value representing the REST resource this
-                    object represents. Servers may infer this from the endpoint the client
-                    submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-                  type: string
-                metadata:
-                  type: object
-                spec:
-                  description: SegmentationPolicySpec defines the desired state of SegmentationPolicy
-                  properties:
-                    namespaces:
-                      items:
-                        type: string
-                      type: array
-                    rules:
-                      items:
-                        properties:
-                          eth:
-                            type: string
-                          ip:
-                            type: string
-                          port:
-                            type: integer
-                        type: object
-                      type: array
-                  required:
-                  - namespaces
-                  - rules
-                  type: object
-                status:
-                  description: SegmentationPolicyStatus defines the observed state of SegmentationPolicy
-                  type: object
-              type: object
-          served: true
-          storage: true
-          subresources:
-            status: {}
-      status:
-        acceptedNames:
-          kind: ""
-          plural: ""
-        conditions: []
-        storedVersions: []
-
-      ```
-      </details>
+  ```
+</details>
 
 
-* Start the operator
+### Start the operator
  
-### Option 1: Operator running outside of the K8s Cluster
+The operator requires connectivity and read/write access privileges the Kubernetes cluster and the APIC controller
 
-* Set the APIC credentials as environmental variables
 
-      export APIC_HOST=<apic_ip_address>
-      export APIC_USERNAME=<apic_username>
-      export APIC_PASSWORD=<apic_password>
+#### Option 1: Operator running outside of the K8s Cluster
+
+This is the prefered method for development environments. Make sure Go >=1.17 is installed on the hosting machine
+
+* Set the [kubeconfig file](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/) on the hosting machine to grant the Operator access to the cluster
+
+      export KUBECONFIG=<kubeconfigfile.yaml>
 
 * Compile the code and execute the binary file 
 
-      make run
+      go run ./main.go
 
 ```
 1.6509721382001133e+09	INFO	setup	starting manager
