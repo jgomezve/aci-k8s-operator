@@ -177,22 +177,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// if err = (&controllers.TenantReconciler{
-	// 	Client:     mgr.GetClient(),
-	// 	Scheme:     mgr.GetScheme(),
-	// 	ApicClient: apicClient,
-	// }).SetupWithManager(mgr); err != nil {
-	// 	setupLog.Error(err, "unable to create controller", "controller", "Tenant")
-	// 	os.Exit(1)
-	// }
-	// if err = (&controllers.ApplicationProfileReconciler{
-	// 	Client:     mgr.GetClient(),
-	// 	Scheme:     mgr.GetScheme(),
-	// 	ApicClient: apicClient,
-	// }).SetupWithManager(mgr); err != nil {
-	// 	setupLog.Error(err, "unable to create controller", "controller", "ApplicationProfile")
-	// 	os.Exit(1)
-	// }
 	if err = (&controllers.SegmentationPolicyReconciler{
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
