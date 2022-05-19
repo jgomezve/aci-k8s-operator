@@ -4,22 +4,18 @@
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/jgomezve/aci-k8s-operator)
 ![Kubernetes version](https://img.shields.io/badge/kubernetes-1.23%2B-blue)
 
-Simplify the Day-2 operation of a [Kubernetes](https://kubernetes.io/) Cluster running the Cisco [ACI-CNI](https://www.cisco.com/c/en/us/td/docs/switches/datacenter/aci/apic/sw/kb/b_Kubernetes_Integration_with_ACI.html), by automating the configuration the [APIC](https://www.cisco.com/c/en/us/products/cloud-systems-management/application-policy-infrastructure-controller-apic/index.html) using a [Kubernetes Operator](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/). 
+Simplify the Day-2 operation of a [Kubernetes](https://kubernetes.io/) Cluster running the Cisco [ACI Container Network Interface (CNI)](https://www.cisco.com/c/dam/en/us/solutions/collateral/data-center-virtualization/application-centric-infrastructure/solution-overview-c22-739493.pdf), by automating the configuration of the [APIC](https://www.cisco.com/c/en/us/products/cloud-systems-management/application-policy-infrastructure-controller-apic/index.html) using a [Kubernetes Operator](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/).  This repository contains a Kubernetes Operator used to manage a Custom Resource named `SegmentationPolicy`. The Operator enforces [Namespace](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/) segmentation from the ACI Fabric based on a straightforward and user-friednly Kubernetes manifest by configuring the required objects (Contracts, Filters, EPGs) on the APIC controller.
 
-This repository contains a Kubernetes Operator used to manage a Custom Resource named `SegmentationPolicy`. The Operator enforces [Namespace](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/) segmentation from the ACI Fabric based on a straightforward Kubernetes Manifest by configuring the required objects (Contracts, Filters, EPGs) on the APIC controller,.
+
+## ACI CNI unified networking
+
+The ACI-CNI is an overlay network plugin that enables a seamless integration between the Kubernetes hosts networking and the ACI Fabric. The plugin makes possible distributed routing and switching with VXLAN overlays fabric-wide and on the Kubernetes nodes. As a result, Pods running inside the Kubernetes cluster become first-class citizens of the ACI Fabric, i.e, Pods are endpoints of the ACI Fabric. As a result the same level of segmentation and policing applied to Bare metal servers and Virtual machine can also be applied to the Pods.
 
 <p align="center">
 <img src="docs/images/aci-k8s-operator.png"  border="0" width="500">
 <br/>
 
-## Overview ACI CNI
-
-![add-app](docs/images/isolation_types.png "ACI CNI Mappings")
-
-The Cisco ACI-CNI takes care of enablinng network connectivity between Pods by provisioning network resources on the worker nodes and on the ACI Fabric. The ACI-CNI extends the ACI iVXLAN Encapsulation used on the ACI Fabric down to the OpenVSwitches running on the worker nodes. This integration gives the ACI Fabric more visibility into the Pod Network, therefore Pods are learned as endpoints of the ACI Fabric.
-
-
-Even though the ACI-CNI allows Kubernetes Administrators to map Namespaces/Deployments to ACI Endpoint Group, further Policy definition on the ACI Fabric stills requires the creation of ACI Constructs from Network Administrators. This operators aims to automate the provisioning of ACI Constructs by definition a new Kubernetes Resource (Segmentation Policy)
+The ACI CNI gives Kubernetes and Network administrators the flexibility to place Deployments, Namespaces and PODs into dedicated EPGs and apply networking policing. This Operator automates the configuration of Cisco ACI Policies by exposing a new Custom Resource (`SegmentationPolicy`) to Kubernetes administrators.
 
  ## Requirements
 
