@@ -163,15 +163,17 @@ This is the prefered method for development environments. Make sure Go >=1.17 is
 1.6523912326504896e+09	INFO	controller.segmentationpolicy	Starting workers	{"reconciler group": "apic.aci.cisco", "reconciler kind": "SegmentationPolicy", "worker count": 1}
 ```
 
-#### Option 2: Operator running inside of the K8s Cluster as a Container/Pod
+#### Option 2: Operator running inside of the K8s Cluster as a Pod
       
-This is the preferred method for production environments. The operator runs as a containerized application inside a Container/`Pod`. A `ClusterRole` and corresponding `ClusterRoleBinding` objects are configured to ensure that the Pod has the required permissions to read/write the Kubernetes API. Based on best-practices, a `Deployment`, configured in a dedicated `Namespace`, manages the `Pod` which hosts the Operator application
+This is the preferred method for production environments. The operator runs as a containerized application inside a `Pod`. A `ClusterRole` and corresponding `ClusterRoleBinding` objects are configured to ensure that the Pod has the required permissions to read/write the Kubernetes API. Based on best-practices, a `Deployment`, configured in a dedicated `Namespace`, manages the `Pod` which hosts the Operator application
 
 
 Connectivity from the Operator's Pod to the APIC controller can satisfied by any of the following options:
 
-      * `SNAT Policy` 
-      * `LoadBalancer`
+  - `SnatPolicy`: This new CRD available in the ACI CNI allows Pods communicate outside of the cluster using SNAT
+  - `LoadBalancer`: This Service Type exposes Pods in the cluster over a know IP address. It also enables the exposed Pods to reach external networks
+  - 
+
 
 *  Deploy the Operator on the Kubernetes Cluster
 
