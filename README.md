@@ -165,7 +165,7 @@ This is the prefered method for development environments. Make sure Go >=1.17 is
 
 #### Option 2: Operator running inside of the K8s Cluster as a Container/Pod
       
-This is the preferred method for production environments. The operator runs as a containerized application inside a Container/`Pod`. A `ClusterRole` and corresponding `ClusterRoleBinding` objects are configured to ensure that the Pod has the required permissions to read/write the Kubernetes API. Based on best-practices, a `Deployment` in a dedicated `Namespace` managed the `Pod` hosting the Operating application
+This is the preferred method for production environments. The operator runs as a containerized application inside a Container/`Pod`. A `ClusterRole` and corresponding `ClusterRoleBinding` objects are configured to ensure that the Pod has the required permissions to read/write the Kubernetes API. Based on best-practices, a `Deployment`, configured in a dedicated `Namespace`, manages the `Pod` which hosts the Operator application
 
 
 Connectivity from the Operator's Pod to the APIC controller can satisfied by any of the following options:
