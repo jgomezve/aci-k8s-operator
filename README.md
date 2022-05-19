@@ -4,7 +4,9 @@
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/jgomezve/aci-k8s-operator)
 ![Kubernetes version](https://img.shields.io/badge/kubernetes-1.23%2B-blue)
 
-Automate the configuration of the network policies on the [APIC](https://www.cisco.com/c/en/us/products/cloud-systems-management/application-policy-infrastructure-controller-apic/index.html) by declaring straightforward segmentation policies as [Kubernetes](https://kubernetes.io/) resources. This repository contains a [Kubernetes Operator](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/) used to manage a Custom Resource named `SegmentationPolicy`, which enforces [Namespace](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/) segmentation from the ACI Fabric by configuring the correspondig Objects (Contracts, Filters, EPGs) on the APIC controller.
+Simplify the Day-2 operation of a [Kubernetes](https://kubernetes.io/) Cluster running the Cisco [ACI-CNI](https://www.cisco.com/c/en/us/td/docs/switches/datacenter/aci/apic/sw/kb/b_Kubernetes_Integration_with_ACI.html), by automating the configuration the [APIC](https://www.cisco.com/c/en/us/products/cloud-systems-management/application-policy-infrastructure-controller-apic/index.html) using a [Kubernetes Operator](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/). 
+
+This repository contains a Kubernetes Operator used to manage a Custom Resource named `SegmentationPolicy`. The Operator enforces [Namespace](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/) segmentation from the ACI Fabric based on a straightforward Kubernetes Manifest by configuring the required objects (Contracts, Filters, EPGs) on the APIC controller,.
 
 <p align="center">
 <img src="docs/images/aci-k8s-operator.png"  border="0" width="500">
@@ -27,6 +29,10 @@ Even though the ACI-CNI allows Kubernetes Administrators to map Namespaces/Deplo
 * [Go](https://golang.org/doc/install) >= 1.17 (Optional)
 
 
+## Table of Contents
+
+  * [Installation](#installation)
+  * [Usage](#usage)
 
 ## Installation
 
@@ -136,11 +142,11 @@ The `install` target configures the manifest located in `config/crd/bases/apic.a
 
 ### 3. Start the operator
  
-The operator requires read/write access privileges the Kubernetes cluster and the APIC controller. During the start-up phase, the Operator discovers APIC configuration parameters from the `ConfigMap` `aci-containers-config`. This `ConfigMap` is automatically deployed during the installation of the ACI CNI. 
+The operator requires read/write access privileges the Kubernetes cluster and the APIC controller. During the start-up phase, the Operator discovers APIC configuration parameters from the `ConfigMap` ***aci-containers-config***. This `ConfigMap` is automatically deployed during the installation of the ACI CNI. 
 
 The information discovered  during the start-up pahse includes the username and private key later used by the Operator to configure the APIC. 
 
-> **Note**:  The `ConfigMap` is deployed in the `Namespace` `aci-containers-system`
+> **Note**:  The `ConfigMap` is deployed in the `Namespace` ***aci-containers-system***
 
 #### Option 1: Operator running outside of the K8s Cluster
 
@@ -172,7 +178,6 @@ Connectivity from the Operator's Pod to the APIC controller can satisfied by any
 
   - `SnatPolicy`: This new CRD available in the ACI CNI allows Pods communicate outside of the cluster using SNAT
   - `LoadBalancer`: This Service Type exposes Pods in the cluster over a know IP address. It also enables the exposed Pods to reach external networks
-  - 
 
 
 *  Deploy the Operator on the Kubernetes Cluster
