@@ -286,4 +286,4 @@ spec:
 ![add-app](docs/images/aci_topology.png "ACI Topology")
 
 
-> **Note**:  [*] If a `Namespace` is defined in the `SegmentationPolicy` but does not exist in the Kubernetes Cluster, the EPG is not created. Furthermore, if a `Namespace` listed in a `SegmentationPolicy` is deleted, the Operator reacts and deletes the corresponding EPG.
+> **Note**:  [*] If a `Namespace` is defined in the `SegmentationPolicy` but does not exist in the Kubernetes Cluster, the EPG is not created. Likewise, if a `Namespace` listed in a `SegmentationPolicy` is deleted, the Operator reacts and deletes the corresponding EPG.
