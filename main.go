@@ -169,7 +169,7 @@ func main() {
 	if err != nil {
 		setupLog.Error(err, "unable to read ACI CNI configuration")
 	}
-	setupLog.Info(fmt.Sprintf("ACI CNI Configuration: %s", cniConf))
+	setupLog.Info(fmt.Sprintf("ACI CNI configuration discovered for tenant %s in APIC controller %s", cniConf.PolicyTenant, cniConf.ApicIp))
 
 	apicClient, err := aci.NewApicClient(cniConf.ApicIp, cniConf.ApicUsername, password, cniConf.ApicPrivateKey)
 	if err != nil {
