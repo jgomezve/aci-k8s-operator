@@ -4,12 +4,12 @@
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/jgomezve/aci-k8s-operator)
 ![Kubernetes version](https://img.shields.io/badge/kubernetes-1.23%2B-blue)
 
-Simplify the Day-2 operation of a [Kubernetes](https://kubernetes.io/) Cluster running the Cisco [ACI Container Network Interface (CNI)](https://www.cisco.com/c/dam/en/us/solutions/collateral/data-center-virtualization/application-centric-infrastructure/solution-overview-c22-739493.pdf), by automating the configuration of the [APIC](https://www.cisco.com/c/en/us/products/cloud-systems-management/application-policy-infrastructure-controller-apic/index.html) using a [Kubernetes Operator](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/).  This repository contains a Kubernetes Operator used to manage a Custom Resource named `SegmentationPolicy`. The Operator enforces [Namespace](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/) segmentation from the ACI Fabric based on a straightforward and user-friendly Kubernetes manifest by configuring the required objects (Contracts, Filters, EPGs) on the APIC controller.
+Simplify the Day-2 operation of a [Kubernetes](https://kubernetes.io/) Cluster running the Cisco [ACI Container Network Interface (CNI)](https://www.cisco.com/c/dam/en/us/solutions/collateral/data-center-virtualization/application-centric-infrastructure/solution-overview-c22-739493.pdf), by automating the configuration of the [APIC](https://www.cisco.com/c/en/us/products/cloud-systems-management/application-policy-infrastructure-controller-apic/index.html) using a [Kubernetes Operator](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/).  This repository contains a Kubernetes Operator used to manage a Custom Resource named `SegmentationPolicy`. The Operator enforces [Namespace](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/) segmentation, based on a straightforward and user-friendly Kubernetes manifest, through the configuration of the required objects (Contracts, Filters, EPGs) on the APIC controller.
 
 
 ## ACI CNI Unified Networking
 
-The ACI-CNI is an overlay network plugin that enables a seamless integration between the Kubernetes hosts and the ACI Fabric. The plugin makes possible distributed routing and switching with VXLAN overlays on the Fabric and on the Kubernetes nodes. By using the ACI CNI, Pods running inside the Kubernetes cluster become first-class citizens of the ACI Fabric, i.e, Pods are endpoints of the ACI Fabric. As a result the same level of segmentation and policing applied to Bare metal servers and Virtual machine can also be applied to the Pods.
+The ACI-CNI is an overlay network plugin that enables a smooth integration between Kubernetes nodes and the ACI Fabric. The plugin makes possible distributed routing and switching with VXLAN overlays on the Fabric and on the Kubernetes nodes. By using the ACI CNI, Pods running inside the Kubernetes cluster become endpoints of the ACI Fabric. As a result, the same level of segmentation and policing applied to Bare-metal servers and virtual machines can also be applied to the Pods.
 
 <p align="center">
 <img src="docs/images/aci-k8s-operator.png"  border="0" width="500">
@@ -18,25 +18,24 @@ The ACI-CNI is an overlay network plugin that enables a seamless integration bet
 Kubernetes administrators can map Deployments and Namespaces to EPGs, which are in turn managed by Network administrators to apply rules with the ACI Policy Model. This Operator eases the collaboration between Network and Kubernetes administrators through the automation of the configuration of ACI Policies based on the specification of a new Custom Resource, the `SegmentationPolicy`.
 
 ## Table of Contents
-\ * [Requirements](#requirements)
+
+  * [Requirements](#requirements)
   * [Installation](#installation)
   * [Usage](#usage)
 
  ## Requirements
 
-* [Cisco APIC](https://www.cisco.com/c/en/us/solutions/data-center-virtualization/application-centric-infrastructure/index.html) >= 5.2.x 
+* [Cisco APIC](https://www.cisco.com/c/en/us/solutions/data-center-virtualization/application-centric-infrastructure/index.html) >= 5.2.x
 * [Kubernetes](https://kubernetes.io/) >= 1.23
 * [ACI-CNI](https://www.cisco.com/c/en/us/td/docs/switches/datacenter/aci/apic/sw/kb/b_Kubernetes_Integration_with_ACI.html)
 * [Go](https://golang.org/doc/install) >= 1.17 (Optional)
 
 
-
-
 ## Installation
 
-This repository has been scaffolded using [Kubebuilder](https://book.kubebuilder.io/introduction.html). Projects created by Kubebuilder contain a [Makefile](https://www.gnu.org/software/make/) that automates the deployment of Kubernetes Resoruces. The make file also leverages [Kustomize](https://kustomize.io/) to dynamically generate Kubernetes manifests
+This repository has been scaffolded using [Kubebuilder](https://book.kubebuilder.io/introduction.html). Projects created by Kubebuilder contain a [Makefile](https://www.gnu.org/software/make/) that eases the installation and testing of the Kubernetes Operator. The Makefile also leverages [Kustomize](https://kustomize.io/) to dynamically generate Kubernetes manifests.
 
-**Your Kubernetes cluster must have already been configured to use the Cisco ACI CNI**
+> **Your Kubernetes cluster must have already been configured to use the Cisco ACI CNI**
 
 ### 1. Clone this repository
 
