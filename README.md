@@ -1,4 +1,4 @@
-# ACI Kubernetes Operator
+# A Kubernetes Operator to Manage Cisco ACI Policies
 
 [![Tests](https://github.com/jgomezve/aci-k8s-operator/actions/workflows/test.yaml/badge.svg)](https://github.com/jgomezve/aci-k8s-operator/actions/workflows/test.yaml)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/jgomezve/aci-k8s-operator)
@@ -53,6 +53,7 @@ This repository has been scaffolded using [Kubebuilder](https://book.kubebuilder
 
 ```
       make install
+      customresourcedefinition.apiextensions.k8s.io/segmentationpolicies.apic.aci.cisco configured
 ```
 ```
       $ kubectl get crd
@@ -64,6 +65,7 @@ This repository has been scaffolded using [Kubebuilder](https://book.kubebuilder
 
 ```
       kubectl -f apply config/crd/bases/apic.aci.cisco_segmentationpolicies.yaml
+      customresourcedefinition.apiextensions.k8s.io/segmentationpolicies.apic.aci.cisco configured
 ```
 
 <details>
@@ -232,6 +234,8 @@ The following example restricts communication between `Namepaces` ***ns1*** and 
 ```
       kubectl create namespace ns1
       kubectl create namespace ns2
+      namespace/ns1 created
+      namespace/ns2 created
 ```
 ```
       kubectl get namespace
@@ -242,7 +246,6 @@ The following example restricts communication between `Namepaces` ***ns1*** and 
 ```
 
 * Create a `SegmentationPolicy` Custom Resources (CR) 
-
 
 ***segmentationpolicy.yaml***
 ```yaml
@@ -283,4 +286,4 @@ spec:
 ![add-app](docs/images/aci_topology.png "ACI Topology")
 
 
-> **Note**:  [*] If a `Namespace` is defined in the `SegmentationPolicy` but does not exist in the Kubernetes Cluster, the EPG is not created. Furthermore, if a `Namespaces` listed in a `SegmentationPolicy` is deleted, the Operator reacts and deletes the corresponding EPGs.
+> **Note**:  [*] If a `Namespace` is defined in the `SegmentationPolicy` but does not exist in the Kubernetes Cluster, the EPG is not created. Furthermore, if a `Namespace` listed in a `SegmentationPolicy` is deleted, the Operator reacts and deletes the corresponding EPG.
