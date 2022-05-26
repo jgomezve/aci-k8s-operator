@@ -269,7 +269,7 @@ spec:
   1. **Filter** per rule defined in the `SegmentationPolicy` CR. The name of the Filters is built based on the information in the manifest as follows *<metadata.name><rule.eth><rule.ip><rule.port>**
   2. **Contract** and a **Subjects** with the name of the `SegmentationPolicy`. The subject includes all the filters mentioned in point ***1***  
   4. An **Application Profile** named **Seg_Pol_<tenant_name>**
-  5. An **EPG** per Namespace defined in the `SegmentationPolicy` CR. The names of the EPGs are the same names of the `Namespaces` *
+  5. An **EPG** per Namespace defined in the `SegmentationPolicy` CR. The names of the EPGs are the same names of the `Namespaces` [*]
     * The EPGs use the Bridge Domain assigned to the Pod Netowrk
     * The EPGs are assigned to the Kubernetes VMM Domaind using the CNI
     * The EPGs consume and provide the Contract mentioned in point ***2***
@@ -279,4 +279,4 @@ spec:
 ![add-app](docs/images/aci_topology.png "ACI Topology")
 
 
-> **Note**:  If a `Namespace` is defined in the `SegmentationPolicy` but does not exist in the Kubernetes Cluster, the EPG is not created.
+> **Note**:  [*] If a `Namespace` is defined in the `SegmentationPolicy` but does not exist in the Kubernetes Cluster, the EPG is not created.
