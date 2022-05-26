@@ -53,9 +53,7 @@ This repository has been scaffolded using [Kubebuilder](https://book.kubebuilder
 
 ```
       make install
-```
 
-```
       $ kubectl get crd
       NAME                                    CREATED AT
       segmentationpolicies.apic.aci.cisco     2022-04-19T15:58:11Z
@@ -178,9 +176,6 @@ This is the preferred method for development environments. Make sure Go >=1.17 i
 ```
       go run ./main.go
 
-```
-
-```
 1.6523912324578347e+09	INFO	setup	ACI CNI configuration discovered for tenant k8s-rke-aci-cni-pod-4 in APIC controller 172.20.91.9
 1.6523912325494506e+09	INFO	setup	starting manager
 1.6523912325497773e+09	INFO	controller.segmentationpolicy	Starting EventSource	{"reconciler group": "apic.aci.cisco", "reconciler kind": "SegmentationPolicy", "source": "kind source: *v1alpha1.SegmentationPolicy"}
@@ -204,9 +199,7 @@ Connectivity from the Operator's Pod to the APIC controller can satisfied by any
 
 ```
       make deploy 
-```
 
-```
       namespace/aci-operator-system created
       customresourcedefinition.apiextensions.k8s.io/segmentationpolicies.apic.aci.cisco created
       serviceaccount/aci-operator-controller-manager created
@@ -232,14 +225,13 @@ Connectivity from the Operator's Pod to the APIC controller can satisfied by any
 
 ## Usage 
 
-The following example restricts communication between `Namepaces` ***ns1*** and ***ns2*** to only HTTPS. A Custom Resource of type `SegmentationPolicy` is created, which specifies the name of the Namespaces and the rules under `spec.namespaces[]` and  `spec.rule[]` respectively
+The following example restricts communication between `Namepaces` ***ns1*** and ***ns2*** to only HTTPS. A Custom Resource of type `SegmentationPolicy` is created, which specifies the name of the Namespaces and the rules under `spec.namespaces[]` and  `spec.rules[]` respectively
 
 * Create the `Namespaces`
-
+```
       kubectl create namespace ns1
       kubectl create namespace ns2
 
-```
       NAME                    STATUS   AGE
       ns1                     Active   11s
       ns2                     Active   8s
@@ -274,13 +266,17 @@ spec:
 ```
 
 * The Kubernetes Operator configures the following Objects/Relationship on the APIC Controller
-  * A Filter per rule defined in the `SegmentationPolicy` CR. The name of the Filters is built based on the information in the manifest as follows **<metadata.name><rule.eth><rule.ip><rule.port>**
-  * A Contract and Subject with the name of the `SegmentationPolicy`
-  * An Application Profile named **Seg_Pol_<tenant_name>**
-  * An EPG per Namespace defined in the `SegmentationPolicy` CR. The names of the EPGs are the same names of the `Namespaces`
+  1. **Filter** per rule defined in the `SegmentationPolicy` CR. The name of the Filters is built based on the information in the manifest as follows *<metadata.name><rule.eth><rule.ip><rule.port>**
+  2. **Contract** and a **Subjects** with the name of the `SegmentationPolicy`. The subject includes all the filters mentioned in point ***1***  
+  4. An **Application Profile** named **Seg_Pol_<tenant_name>**
+  5. An **EPG** per Namespace defined in the `SegmentationPolicy` CR. The names of the EPGs are the same names of the `Namespaces` *
+    * The EPGs use the Bridge Domain assigned to the Pod Netowrk
+    * The EPGs are assigned to the Kubernetes VMM Domaind using the CNI
+    * The EPGs consume and provide the Contract mentioned in point ***2***
+    * The EPGs set the ACI-CNI default EPG as a Master EPG
 
 
 ![add-app](docs/images/aci_topology.png "ACI Topology")
 
 
- If the `Namespace` does not exist in the Kubernetes Cluster, the EPG is not created
+> **Note**:  If a `Namespace` is defined in the `SegmentationPolicy` but does not exist in the Kubernetes Cluster, the EPG is not created.
