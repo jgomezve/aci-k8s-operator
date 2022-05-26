@@ -29,37 +29,46 @@ Kubernetes administrators can map Deployments and Namespaces to EPGs, which are 
 * [Kubernetes](https://kubernetes.io/) >= 1.23
 * [ACI-CNI](https://www.cisco.com/c/en/us/td/docs/switches/datacenter/aci/apic/sw/kb/b_Kubernetes_Integration_with_ACI.html)
 * [Go](https://golang.org/doc/install) >= 1.17 (Optional)
+* [Make](https://www.gnu.org/software/make/)
+* [Kustomize](https://kustomize.io/)  
 
 
 ## Installation
 
-This repository has been scaffolded using [Kubebuilder](https://book.kubebuilder.io/introduction.html). Projects created by Kubebuilder contain a [Makefile](https://www.gnu.org/software/make/) that eases the installation and testing of the Kubernetes Operator. The Makefile also leverages [Kustomize](https://kustomize.io/) to dynamically generate Kubernetes manifests.
+This repository has been scaffolded using [Kubebuilder](https://book.kubebuilder.io/introduction.html). Projects created by Kubebuilder contain a Makefile that eases the installation and testing of the Kubernetes Operator. The Makefile also leverages Kustomize to dynamically generate Kubernetes manifests.
 
 > **Your Kubernetes cluster must have already been configured to use the Cisco ACI CNI**
 
 ### 1. Clone this repository
 
+```
       git clone https://github.com/jgomezve/aci-k8s-operator
       cd aci-k8s-operator
+```
 
 
 ### 2. Configure the CRD `SegmentationPolicy`
 
 * Configure the Custom Resource Definition (CRD) `SegmentationPolicy` on the Kubernetes clusters
 
+```
       make install
+```
 
-
-
+```
       $ kubectl get crd
       NAME                                    CREATED AT
       segmentationpolicies.apic.aci.cisco     2022-04-19T15:58:11Z
+```
 
+* Alternatively you could apply the manifest directly
 
-The `install` target configures the manifest located in `config/crd/bases/apic.aci.cisco_segmentationpolicies.yaml`
+```
+      kubectl -f apply config/crd/bases/apic.aci.cisco_segmentationpolicies.yaml
+```
 
 <details>
-  <summary> <code>SegmentationPolicy</code> CRD</summary>
+  <summary><code>config/crd/bases/apic.aci.cisco_segmentationpolicies.yaml</code></summary>
   
   ```yaml
     ---
@@ -140,23 +149,36 @@ The `install` target configures the manifest located in `config/crd/bases/apic.a
 
 ### 3. Start the operator
  
-The operator requires read/write access privileges the Kubernetes cluster and the APIC controller. During the start-up phase, the Operator discovers APIC configuration parameters from the `ConfigMap` ***aci-containers-config***. This `ConfigMap` is automatically deployed during the installation of the ACI CNI. 
+The operator requires read/write access privileges to the Kubernetes cluster and the APIC controller. During the start-up phase, the Operator discovers the APIC configuration parameters from the `ConfigMap` ***aci-containers-config***. This `ConfigMap` is automatically deployed during the installation of the ACI CNI. 
 
-The information discovered  during the start-up pahse includes the username and private key later used by the Operator to configure the APIC. 
+APIC's username and private key, which are used by the  Operator, are discovered during the start-up phase.
 
-> **Note**:  The `ConfigMap` is deployed in the `Namespace` ***aci-containers-system***
+
+> **Note**:  The `ConfigMap` ***aci-containers-config*** is deployed in the `Namespace` ***aci-containers-system***
 
 #### Option 1: Operator running outside of the K8s Cluster
 
-This is the prefered method for development environments. Make sure Go >=1.17 is installed on the hosting machine
+This is the preferred method for development environments. Make sure Go >=1.17 is installed on the machine running the Kubernetes Operator
 
-* Set the [kubeconfig file](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/) on the hosting machine to grant the Operator access to the cluster
+* Set the [kubeconfig file](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/) on the hosting machine to grant the Operator access to the Kubernetes cluster
 
+```
       export KUBECONFIG=<kubeconfigfile.yaml>
+```
 
 * Compile the code and execute the binary file 
 
+```
       make run
+
+```
+
+* Alternatively you could excute Go commands directly
+
+```
+      go run ./main.go
+
+```
 
 ```
 1.6523912324578347e+09	INFO	setup	ACI CNI configuration discovered for tenant k8s-rke-aci-cni-pod-4 in APIC controller 172.20.91.9
@@ -169,113 +191,96 @@ This is the prefered method for development environments. Make sure Go >=1.17 is
 
 #### Option 2: Operator running inside of the K8s Cluster as a Pod
       
-This is the preferred method for production environments. The operator runs as a containerized application inside a `Pod`. A `ClusterRole` and corresponding `ClusterRoleBinding` objects are configured to ensure that the Pod has the required permissions to read/write the Kubernetes API. Based on best-practices, a `Deployment`, configured in a dedicated `Namespace`, manages the `Pod` which hosts the Operator application
+This is the preferred method for production environments. The operator runs as a containerized application inside a `Pod`. `ClusterRole` and corresponding `ClusterRoleBinding` objects must be configured to ensure that the Pod has the required permissions to read/write the Kubernetes API. Based on best-practices, a `Deployment`, configured in a dedicated `Namespace`, manages the `Pod` which hosts the Operator application
 
 
 Connectivity from the Operator's Pod to the APIC controller can satisfied by any of the following options:
 
-  - `SnatPolicy`: This new CRD available in the ACI CNI allows Pods communicate outside of the cluster using SNAT
-  - `LoadBalancer`: This Service Type exposes Pods in the cluster over a know IP address. It also enables the exposed Pods to reach external networks
+  1. `SnatPolicy`: This new CRD, available in the ACI-CNI, allows Pods to communicate outside of the cluster using SNAT
+  2. `LoadBalancer`: This Service Type exposes Pods in the cluster over a known IP address. It also enables the exposed Pods to reach external networks
 
 
 *  Deploy the Operator on the Kubernetes Cluster
 
+```
       make deploy 
+```
 
 ```
-namespace/aci-operator-system created
-customresourcedefinition.apiextensions.k8s.io/segmentationpolicies.apic.aci.cisco created
-serviceaccount/aci-operator-controller-manager created
-role.rbac.authorization.k8s.io/aci-operator-leader-election-role created
-clusterrole.rbac.authorization.k8s.io/aci-operator-manager-role created
-clusterrole.rbac.authorization.k8s.io/aci-operator-metrics-reader created
-clusterrole.rbac.authorization.k8s.io/aci-operator-proxy-role created
-rolebinding.rbac.authorization.k8s.io/aci-operator-leader-election-rolebinding created
-clusterrolebinding.rbac.authorization.k8s.io/aci-operator-manager-rolebinding created
-clusterrolebinding.rbac.authorization.k8s.io/aci-operator-proxy-rolebinding created
-configmap/aci-operator-manager-config created
-service/aci-operator-controller-manager-metrics-service created
-deployment.apps/aci-operator-controller-manager created
+      namespace/aci-operator-system created
+      customresourcedefinition.apiextensions.k8s.io/segmentationpolicies.apic.aci.cisco created
+      serviceaccount/aci-operator-controller-manager created
+      role.rbac.authorization.k8s.io/aci-operator-leader-election-role created
+      clusterrole.rbac.authorization.k8s.io/aci-operator-manager-role created
+      clusterrole.rbac.authorization.k8s.io/aci-operator-metrics-reader created
+      clusterrole.rbac.authorization.k8s.io/aci-operator-proxy-role created
+      rolebinding.rbac.authorization.k8s.io/aci-operator-leader-election-rolebinding created
+      clusterrolebinding.rbac.authorization.k8s.io/aci-operator-manager-rolebinding created
+      clusterrolebinding.rbac.authorization.k8s.io/aci-operator-proxy-rolebinding created
+      configmap/aci-operator-manager-config created
+      service/aci-operator-controller-manager-metrics-service created
+      deployment.apps/aci-operator-controller-manager created
 ```
 
 *  Check the Controler status
 
 ```
-$ kubectl get pod -n aci-operator-system
-NAME                                              READY   STATUS    RESTARTS   AGE
-aci-operator-controller-manager-55d9777c9-89vh4   2/2     Running   0          14m
+      $ kubectl get pod -n aci-operator-system
+      NAME                                              READY   STATUS    RESTARTS   AGE
+      aci-operator-controller-manager-55d9777c9-89vh4   2/2     Running   0          14m
 ```
 
 ## Usage 
 
+The following example restricts communication between `Namepaces` ***ns1*** and ***ns2*** to only HTTPS. A Custom Resource of type `SegmentationPolicy` is created, which specifies the name of the Namespaces and the rules under `spec.namespaces[]` and  `spec.rule[]` respectively
 
-* Create four namespaces
+* Create the `Namespaces`
 
-      kubectl create ns <ns_name>
+      kubectl create namespace ns1
+      kubectl create namespace ns2
 
 ```
-NAME                    STATUS   AGE
-aci-containers-system   Active   145d
-cattle-system           Active   145d
-default                 Active   145d
-fleet-system            Active   145d
-ingress-nginx           Active   145d
-kube-node-lease         Active   145d
-kube-public             Active   145d
-kube-system             Active   145d
-ns1                     Active   11s
-ns2                     Active   8s
-ns3                     Active   5s
-ns4                     Active   3s
+      NAME                    STATUS   AGE
+      ns1                     Active   11s
+      ns2                     Active   8s
 
 ```
 
-* Configure a two `SegmentationPolicy` Custom Resources (CR) 
+* Create a `SegmentationPolicy` Custom Resources (CR) 
 
-*apic_v1alpha1_segmentationpolicy.yaml*
+
+***segmentationpolicy.yaml***
 ```yaml
 apiVersion: apic.aci.cisco/v1alpha1
 kind: SegmentationPolicy
 metadata:
   name: segpol1
 spec:
-  tenant: k8s-operator
   namespaces:
     - ns1
     - ns2
   rules:
-    - eth: arp
-    - eth: ip
-      ip: udp
-      port: 53
----
-apiVersion: apic.aci.cisco/v1alpha1
-kind: SegmentationPolicy
-metadata:
-  name: segpol2
-spec:
-  tenant: k8s-operator
-  namespaces:
-    - ns2
-    - ns3
-    - ns4
-  rules:
     - eth: ip
       ip: tcp
-      port: 80 
+      port: 443
 ```
 
-      kubectl apply -f apic_v1alpha1_segmentationpolicy.yaml
+      kubectl apply -f segmentationpolicy.yaml
 
 ```
-$ kubectl get segmentationpolicies.apic.aci.cisco
-NAME      AGE
-segpol1   22s
-segpol2   22s
+      $ kubectl get segmentationpolicies.apic.aci.cisco
+      NAME      AGE
+      segpol1   22s
 ```
-> **_NOTE:_** Examples can be found under `config/samples/apic_v1alpha1_segmentationpolicy.yaml`
+
+* The Kubernetes Operator configures the following Objects/Relationship on the APIC Controller
+  * A Filter per rule defined in the `SegmentationPolicy` CR. The name of the Filters is built based on the information in the manifest as follows **<metadata.name><rule.eth><rule.ip><rule.port>**
+  * A Contract and Subject with the name of the `SegmentationPolicy`
+  * An Application Profile named **Seg_Pol_<tenant_name>**
+  * An EPG per Namespace defined in the `SegmentationPolicy` CR. The names of the EPGs are the same names of the `Namespaces`
+
 
 ![add-app](docs/images/aci_topology.png "ACI Topology")
 
-## More Information
-Build using [Kubebuilder](https://book.kubebuilder.io/introduction.html)
+
+ If the `Namespace` does not exist in the Kubernetes Cluster, the EPG is not created
