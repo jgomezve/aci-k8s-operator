@@ -53,7 +53,8 @@ This repository has been scaffolded using [Kubebuilder](https://book.kubebuilder
 
 ```
       make install
-
+```
+```
       $ kubectl get crd
       NAME                                    CREATED AT
       segmentationpolicies.apic.aci.cisco     2022-04-19T15:58:11Z
@@ -225,13 +226,15 @@ Connectivity from the Operator's Pod to the APIC controller can satisfied by any
 
 ## Usage 
 
-The following example restricts communication between `Namepaces` ***ns1*** and ***ns2*** to only HTTPS. A Custom Resource of type `SegmentationPolicy` is created, which specifies the name of the Namespaces and the rules under `spec.namespaces[]` and  `spec.rules[]` respectively
+The following example restricts communication between `Namepaces` ***ns1*** and ***ns2*** to only HTTPS. A Custom Resource of type `SegmentationPolicy` is created. It specifies the name of the Namespaces and the rules under `spec.namespaces[]` and  `spec.rules[]` respectively
 
 * Create the `Namespaces`
 ```
       kubectl create namespace ns1
       kubectl create namespace ns2
-
+```
+```
+      kubectl get namespace
       NAME                    STATUS   AGE
       ns1                     Active   11s
       ns2                     Active   8s
@@ -258,25 +261,26 @@ spec:
 ```
 
       kubectl apply -f segmentationpolicy.yaml
+      segmentationpolicy.apic.aci.cisco/segpol1 created
 
 ```
-      $ kubectl get segmentationpolicies.apic.aci.cisco
+      $ kubectl get segmentationpolicies
       NAME      AGE
       segpol1   22s
 ```
 
 * The Kubernetes Operator configures the following Objects/Relationship on the APIC Controller
-  1. **Filter** per rule defined in the `SegmentationPolicy` CR. The name of the Filters is built based on the information in the manifest as follows *<metadata.name><rule.eth><rule.ip><rule.port>**
-  2. **Contract** and a **Subjects** with the name of the `SegmentationPolicy`. The subject includes all the filters mentioned in point ***1***  
+  1. **Filter** per rule defined in the `SegmentationPolicy` CR. The name of the Filters is built based on the information from the manifest as follows **<metadata.name><rule.eth><rule.ip><rule.port>**
+  2. **Contract** and **Subject** with the name of the `SegmentationPolicy`. The subject includes all the filters mentioned in point ***(i)***  
   4. An **Application Profile** named **Seg_Pol_<tenant_name>**
-  5. An **EPG** per Namespace defined in the `SegmentationPolicy` CR. The names of the EPGs are the same names of the `Namespaces` [*]
-    * The EPGs use the Bridge Domain assigned to the Pod Netowrk
-    * The EPGs are assigned to the Kubernetes VMM Domaind using the CNI
-    * The EPGs consume and provide the Contract mentioned in point ***2***
-    * The EPGs set the ACI-CNI default EPG as a Master EPG
+  5. An **EPG** per Namespace defined in the `SegmentationPolicy` CR. The names of the EPGs are the same names of the `Namespaces` [*]. The following properties are configured under the EPG:
+    * The Bridge Domain is set to the one assigned to the Pod Netowrk
+    * The VMM Domain of type Kubernetes used by the CNI is assigned
+    * The Contracts mentioned in point ***(ii)*** are consumed and assigned
+    * The ACI-CNI "default" EPG is set as the Master EPG
 
 
 ![add-app](docs/images/aci_topology.png "ACI Topology")
 
 
-> **Note**:  [*] If a `Namespace` is defined in the `SegmentationPolicy` but does not exist in the Kubernetes Cluster, the EPG is not created.
+> **Note**:  [*] If a `Namespace` is defined in the `SegmentationPolicy` but does not exist in the Kubernetes Cluster, the EPG is not created. Furthermore, if a `Namespaces` listed in a `SegmentationPolicy` is deleted, the Operator reacts and deletes the corresponding EPGs.
