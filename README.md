@@ -49,11 +49,11 @@ This repository has been scaffolded using [Kubebuilder](https://book.kubebuilder
 
       make install
 
-```
-$ kubectl get crd
-NAME                                    CREATED AT
-segmentationpolicies.apic.aci.cisco     2022-04-19T15:58:11Z
-```
+
+      $ kubectl get crd
+      NAME                                    CREATED AT
+      segmentationpolicies.apic.aci.cisco     2022-04-19T15:58:11Z
+
 
 The `install` target configures the manifest located in `config/crd/bases/apic.aci.cisco_segmentationpolicies.yaml`
 
