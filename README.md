@@ -50,6 +50,7 @@ This repository has been scaffolded using [Kubebuilder](https://book.kubebuilder
       make install
 
 
+
       $ kubectl get crd
       NAME                                    CREATED AT
       segmentationpolicies.apic.aci.cisco     2022-04-19T15:58:11Z
