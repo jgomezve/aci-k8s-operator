@@ -101,15 +101,18 @@ func (r *SegmentationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	// if the event is not related to delete, just check if the finalizers are rightfully set on the resource
 	if segPolObject.GetDeletionTimestamp().IsZero() && !reflect.DeepEqual(finalizersSegPol, segPolObject.GetFinalizers()) {
-		// set the finalizers of the Tenant to the rightful ones
+		// set the finalizers of the SegmentationPolicy to the rightful ones
 		segPolObject.SetFinalizers(finalizersSegPol)
 		if err := r.Update(ctx, segPolObject); err != nil {
-			logger.Error(err, "error occurred while setting the finalizers of the Tenant resource")
+			logger.Error(err, "error occurred while setting the finalizers of the SegmentationPolicy resource")
 			return ctrl.Result{}, err
 		}
 	}
 
-	if !segPolObject.GetDeletionTimestamp().IsZero() {
+	// the Finalizer callback function modified Namespaces, which in turn trigger a new Request.
+	// It could be that the controller tries to delete something that is already deleted.
+	//  Workaround: Only call the Finalizer callback function if the finalizers are not empty
+	if !segPolObject.GetDeletionTimestamp().IsZero() && reflect.DeepEqual(finalizersSegPol, segPolObject.GetFinalizers()) {
 		logger.Info("Deletion detected! Proceeding to cleanup the finalizers...")
 		if err := r.deleteSegPolicyFinalizerCallback(ctx, logger, segPolObject); err != nil {
 			logger.Error(err, "error occurred while dealing with the delete finalizer")
@@ -225,12 +228,12 @@ func (r *SegmentationPolicyReconciler) deleteSegPolicyFinalizerCallback(ctx cont
 		}
 	}
 
-	// remove the cleanup-row finalizer from the postgresWriterObject
-	controllerutil.RemoveFinalizer(segPolObject, "finalizers.segmentationpolicies.apic.aci.cisco/delete")
+	// remove finalizer
+	controllerutil.RemoveFinalizer(segPolObject, finalizersSegPol[0])
 	if err := r.Update(ctx, segPolObject); err != nil {
 		return fmt.Errorf("error occurred while removing the finalizer: %w", err)
 	}
-	logger.Info("cleaned up the 'finalizers.segmentationpolicies.apic.aci.cisco/delete' finalizer successfully")
+	logger.Info(fmt.Sprintf("cleaned up the '%s' finalizer successfully", finalizersSegPol))
 	return nil
 }
 
