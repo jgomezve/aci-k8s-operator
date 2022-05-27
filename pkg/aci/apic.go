@@ -9,7 +9,7 @@ import (
 	"github.com/ciscoecosystem/aci-go-client/client"
 	"github.com/ciscoecosystem/aci-go-client/models"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/jgomezve/aci-operator/pkg/utils"
+	"github.com/jgomezve/aci-k8s-operator/pkg/utils"
 )
 
 type ApicClient struct {

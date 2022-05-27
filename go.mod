@@ -1,4 +1,4 @@
-module github.com/jgomezve/aci-operator
+module github.com/jgomezve/aci-k8s-operator
 
 go 1.17
 

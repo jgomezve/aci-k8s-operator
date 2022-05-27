@@ -32,8 +32,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	apicv1alpha1 "github.com/jgomezve/aci-operator/api/v1alpha1"
-	"github.com/jgomezve/aci-operator/pkg/aci"
+	apicv1alpha1 "github.com/jgomezve/aci-k8s-operator/api/v1alpha1"
+	"github.com/jgomezve/aci-k8s-operator/pkg/aci"
 	//+kubebuilder:scaffold:imports
 )
 

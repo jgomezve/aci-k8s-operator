@@ -36,9 +36,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/go-logr/logr"
-	"github.com/jgomezve/aci-operator/api/v1alpha1"
-	"github.com/jgomezve/aci-operator/pkg/aci"
-	"github.com/jgomezve/aci-operator/pkg/utils"
+	"github.com/jgomezve/aci-k8s-operator/api/v1alpha1"
+	"github.com/jgomezve/aci-k8s-operator/pkg/aci"
+	"github.com/jgomezve/aci-k8s-operator/pkg/utils"
 )
 
 var (

@@ -40,9 +40,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	apicv1alpha1 "github.com/jgomezve/aci-operator/api/v1alpha1"
-	"github.com/jgomezve/aci-operator/controllers"
-	"github.com/jgomezve/aci-operator/pkg/aci"
+	apicv1alpha1 "github.com/jgomezve/aci-k8s-operator/api/v1alpha1"
+	"github.com/jgomezve/aci-k8s-operator/controllers"
+	"github.com/jgomezve/aci-k8s-operator/pkg/aci"
 	"github.com/tidwall/gjson"
 	//+kubebuilder:scaffold:imports
 )
