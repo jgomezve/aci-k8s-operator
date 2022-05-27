@@ -20,8 +20,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/jgomezve/aci-operator/api/v1alpha1"
-	"github.com/jgomezve/aci-operator/pkg/aci"
+	"github.com/jgomezve/aci-k8s-operator/api/v1alpha1"
+	"github.com/jgomezve/aci-k8s-operator/pkg/aci"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"

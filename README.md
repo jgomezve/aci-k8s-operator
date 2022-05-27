@@ -203,27 +203,27 @@ Connectivity from the Operator's Pod to the APIC controller can satisfied by any
 ```
       make deploy 
 
-      namespace/aci-operator-system created
+      namespace/aci-k8s-operator-system created
       customresourcedefinition.apiextensions.k8s.io/segmentationpolicies.apic.aci.cisco created
-      serviceaccount/aci-operator-controller-manager created
-      role.rbac.authorization.k8s.io/aci-operator-leader-election-role created
-      clusterrole.rbac.authorization.k8s.io/aci-operator-manager-role created
-      clusterrole.rbac.authorization.k8s.io/aci-operator-metrics-reader created
-      clusterrole.rbac.authorization.k8s.io/aci-operator-proxy-role created
-      rolebinding.rbac.authorization.k8s.io/aci-operator-leader-election-rolebinding created
-      clusterrolebinding.rbac.authorization.k8s.io/aci-operator-manager-rolebinding created
-      clusterrolebinding.rbac.authorization.k8s.io/aci-operator-proxy-rolebinding created
-      configmap/aci-operator-manager-config created
-      service/aci-operator-controller-manager-metrics-service created
-      deployment.apps/aci-operator-controller-manager created
+      serviceaccount/aci-k8s-operator-controller-manager created
+      role.rbac.authorization.k8s.io/aci-k8s-operator-leader-election-role created
+      clusterrole.rbac.authorization.k8s.io/aci-k8s-operator-manager-role created
+      clusterrole.rbac.authorization.k8s.io/aci-k8s-operator-metrics-reader created
+      clusterrole.rbac.authorization.k8s.io/aci-k8s-operator-proxy-role created
+      rolebinding.rbac.authorization.k8s.io/aci-k8s-operator-leader-election-rolebinding created
+      clusterrolebinding.rbac.authorization.k8s.io/aci-k8s-operator-manager-rolebinding created
+      clusterrolebinding.rbac.authorization.k8s.io/aci-k8s-operator-proxy-rolebinding created
+      configmap/aci-k8s-operator-manager-config created
+      service/aci-k8s-operator-controller-manager-metrics-service created
+      deployment.apps/aci-k8s-operator-controller-manager created
 ```
 
 *  Check the Controler status
 
 ```
-      $ kubectl get pod -n aci-operator-system
+      $ kubectl get pod -n aci-k8s-operator-system
       NAME                                              READY   STATUS    RESTARTS   AGE
-      aci-operator-controller-manager-55d9777c9-89vh4   2/2     Running   0          14m
+      aci-k8s-operator-controller-manager-55d9777c9-89vh4   2/2     Running   0          14m
 ```
 
 ## Usage 

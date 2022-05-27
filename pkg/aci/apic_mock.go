@@ -3,7 +3,7 @@ package aci
 import (
 	"fmt"
 
-	"github.com/jgomezve/aci-operator/pkg/utils"
+	"github.com/jgomezve/aci-k8s-operator/pkg/utils"
 )
 
 type endpointGroup struct {

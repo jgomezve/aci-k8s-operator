@@ -1,8 +1,8 @@
 domain: aci.cisco
 layout:
 - go.kubebuilder.io/v3
-projectName: aci-operator
-repo: github.com/jgomezve/aci-operator
+projectName: aci-k8s-operator
+repo: github.com/jgomezve/aci-k8s-operator
 resources:
 - api:
     crdVersion: v1
@@ -11,6 +11,6 @@ resources:
   domain: aci.cisco
   group: apic
   kind: SegmentationPolicy
-  path: github.com/jgomezve/aci-operator/api/v1alpha1
+  path: github.com/jgomezve/aci-k8s-operator/api/v1alpha1
   version: v1alpha1
 version: "3"
