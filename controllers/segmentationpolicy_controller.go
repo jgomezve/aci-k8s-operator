@@ -109,8 +109,9 @@ func (r *SegmentationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 		}
 	}
 
-	// the Finalizer callback function modified Namespaces, which in turn trigger a new Request.
-	// It could be that the controller tries to delete something that is already deleted.
+	//  The Finalizer callback function modifies Namespaces (Remove OpFlex annotation).
+	//  This action in turn triggers a new Reconciliation Request (SegmentationPolicy watches Namespaces).
+	//  It could be that the controller tries to delete something that is already deleted.
 	//  Workaround: Only call the Finalizer callback function if the finalizers are not empty
 	if !segPolObject.GetDeletionTimestamp().IsZero() && reflect.DeepEqual(finalizersSegPol, segPolObject.GetFinalizers()) {
 		logger.Info("Deletion detected! Proceeding to cleanup the finalizers...")
