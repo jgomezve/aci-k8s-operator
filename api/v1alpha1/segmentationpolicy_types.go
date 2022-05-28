@@ -45,6 +45,7 @@ type SegmentationPolicyStatus struct {
 }
 
 //+kubebuilder:object:root=true
+//+kubebuilder:resource:shortName=segpol
 //+kubebuilder:subresource:status
 
 // SegmentationPolicy is the Schema for the segmentationpolicies API

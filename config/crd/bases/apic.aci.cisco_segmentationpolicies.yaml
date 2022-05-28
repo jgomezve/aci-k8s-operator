@@ -12,6 +12,8 @@ spec:
     kind: SegmentationPolicy
     listKind: SegmentationPolicyList
     plural: segmentationpolicies
+    shortNames:
+    - segpol
     singular: segmentationpolicy
   scope: Namespaced
   versions:
