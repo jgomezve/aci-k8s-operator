@@ -258,8 +258,8 @@ spec:
     - ns1
     - ns2
   rules:
-    - eth: ip
-      ip: tcp
+    - eth_type: ip
+      ip_protocol: tcp
       port: 443
 ```
 

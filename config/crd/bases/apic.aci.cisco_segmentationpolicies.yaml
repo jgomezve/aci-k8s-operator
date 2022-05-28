@@ -15,11 +15,23 @@ spec:
     singular: segmentationpolicy
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: Namespaces
+      jsonPath: .spec.namespaces
+      name: Namespaces
+      type: string
+    - description: Eth
+      jsonPath: .spec.rules
+      name: L3 Protocol
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: SegmentationPolicy is the Schema for the segmentationpolicies
-          API
+        description: Group is the Schema for the groups API SegmentationPolicy is
+          the Schema for the segmentationpolicies API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation

@@ -45,8 +45,12 @@ type SegmentationPolicyStatus struct {
 }
 
 //+kubebuilder:object:root=true
+//+kubebuilder:printcolumn:name="Namespaces",type="string",JSONPath=".spec.namespaces",description="Namespaces"
+//+kubebuilder:printcolumn:name="L3 Protocol",type="string",JSONPath=".spec.rules",description="Eth"
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 //+kubebuilder:subresource:status
 
+// Group is the Schema for the groups API
 // SegmentationPolicy is the Schema for the segmentationpolicies API
 type SegmentationPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
