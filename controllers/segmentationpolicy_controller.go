@@ -180,7 +180,7 @@ func (r *SegmentationPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		For(&v1alpha1.SegmentationPolicy{}).
 		Watches(&source.Kind{Type: &corev1.Namespace{}},
 			handler.EnqueueRequestsFromMapFunc(r.nameSpaceSegPolicyMapFunc)).
-		//TODO: Makre the code convergent. Status attributed should only be modified if the APIC is actually modified
+		//TODO: Make the code convergent. Status attributes should only be modified if the APIC is actually modified
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(r)
 }
