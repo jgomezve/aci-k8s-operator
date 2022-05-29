@@ -26,6 +26,10 @@ spec:
       jsonPath: .status.rules
       name: Rules
       type: string
+    - description: APIC Objects state
+      jsonPath: .status.state
+      name: State
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -76,9 +80,12 @@ spec:
                 type: string
               rules:
                 type: string
+              state:
+                type: string
             required:
             - namespaces
             - rules
+            - state
             type: object
         type: object
     served: true

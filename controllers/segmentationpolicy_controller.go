@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
@@ -100,6 +101,12 @@ func (r *SegmentationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, err
 	}
 
+	segPolObject.Status.State = "Creating"
+	err = r.Status().Update(context.Background(), segPolObject)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("error occurred while setting the status: %w", err)
+	}
+
 	// if the event is not related to delete, just check if the finalizers are rightfully set on the resource
 	if segPolObject.GetDeletionTimestamp().IsZero() && !reflect.DeepEqual(finalizersSegPol, segPolObject.GetFinalizers()) {
 		// set the finalizers of the SegmentationPolicy to the rightful ones
@@ -129,6 +136,12 @@ func (r *SegmentationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return result, err
 	}
 
+	segPolObject.Status.State = "EPGs Created"
+	err = r.Status().Update(context.Background(), segPolObject)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("error occurred while setting the status: %w", err)
+	}
+
 	// Create Contract and Subject and associate the filters
 	filtersSegPol := []string{}
 	for _, rule := range segPolObject.Spec.Rules {
@@ -154,6 +167,11 @@ func (r *SegmentationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 	if err != nil {
 		return result, err
 	}
+	segPolObject.Status.State = "Enforced"
+	err = r.Status().Update(context.Background(), segPolObject)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("error occurred while setting the status: %w", err)
+	}
 
 	return ctrl.Result{}, nil
 }
@@ -164,6 +182,8 @@ func (r *SegmentationPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		For(&v1alpha1.SegmentationPolicy{}).
 		Watches(&source.Kind{Type: &corev1.Namespace{}},
 			handler.EnqueueRequestsFromMapFunc(r.nameSpaceSegPolicyMapFunc)).
+		//TODO: Makre the code convergent. Status attributed should only be modified if the APIC is actually modified
+		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(r)
 }
 
@@ -197,6 +217,12 @@ func (r *SegmentationPolicyReconciler) nameSpaceSegPolicyMapFunc(object client.O
 // Remove the APIC objects associated with a SegmentationPolicy
 func (r *SegmentationPolicyReconciler) deleteSegPolicyFinalizerCallback(ctx context.Context, logger logr.Logger, segPolObject *v1alpha1.SegmentationPolicy) error {
 
+	segPolObject.Status.State = "Deleting"
+	err := r.Status().Update(context.Background(), segPolObject)
+	if err != nil {
+		return fmt.Errorf("error occurred while setting the status: %w", err)
+	}
+
 	// Delete all the filters defined in the SegmenationPolicy
 	for _, rule := range segPolObject.Spec.Rules {
 		filterName := fmt.Sprintf("%s_%s%s%s", segPolObject.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
@@ -208,6 +234,12 @@ func (r *SegmentationPolicyReconciler) deleteSegPolicyFinalizerCallback(ctx cont
 	// Delete the contract and subject
 	if err := r.ApicClient.DeleteContract(r.CniConfig.PolicyTenant, segPolObject.Name); err != nil {
 		return fmt.Errorf("error occurred while deleting contract: %w", err)
+	}
+
+	segPolObject.Status.State = "Filters Deleted"
+	err = r.Status().Update(context.Background(), segPolObject)
+	if err != nil {
+		return fmt.Errorf("error occurred while setting the status: %w", err)
 	}
 
 	// Check the EPGs associated with the SegmentationPolicy
@@ -254,7 +286,7 @@ func (r *SegmentationPolicyReconciler) ReconcileNamespacesEpgs(ctx context.Conte
 	segPolObject.Status.Namespaces = strings.Join(utils.Intersect(nsClusterNames, segPolObject.Spec.Namespaces), ", ")
 	err := r.Status().Update(context.Background(), segPolObject)
 	if err != nil {
-		return reconcile.Result{}, err
+		return reconcile.Result{}, fmt.Errorf("error occurred while setting the status: %w", err)
 	}
 
 	// Always create/overwrite the same Application Profile

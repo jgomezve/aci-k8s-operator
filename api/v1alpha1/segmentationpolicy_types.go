@@ -42,11 +42,13 @@ type RuleSpec struct {
 type SegmentationPolicyStatus struct {
 	Namespaces string `json:"namespaces"`
 	Rules      string `json:"rules"`
+	State      string `json:"state"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:printcolumn:name="Namespaces",type="string",JSONPath=".status.namespaces",description="Namespaces"
 //+kubebuilder:printcolumn:name="Rules",type="string",JSONPath=".status.rules",description="Rules"
+//+kubebuilder:printcolumn:name="State",type="string",JSONPath=".status.state",description="APIC Objects state"
 //+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 //+kubebuilder:resource:shortName=segpol
 //+kubebuilder:subresource:status
