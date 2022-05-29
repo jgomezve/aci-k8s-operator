@@ -47,6 +47,7 @@ type SegmentationPolicyStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:printcolumn:name="Namespaces",type="string",JSONPath=".status.namespaces",description="Namespaces"
 //+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
+//+kubebuilder:resource:shortName=segpol
 //+kubebuilder:subresource:status
 
 // Group is the Schema for the groups API
