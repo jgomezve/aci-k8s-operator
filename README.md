@@ -258,8 +258,8 @@ spec:
     - ns1
     - ns2
   rules:
-    - eth_type: ip
-      ip_protocol: tcp
+    - eth: ip
+      ip: tcp
       port: 443
 ```
 
@@ -268,8 +268,8 @@ spec:
 
 ```
       $ kubectl get segmentationpolicies
-      NAME      AGE
-      segpol1   22s
+      NAME      NAMESPACES   RULES                   AGE
+      segpol1   ns1, ns2     ip-tcp-443              29s
 ```
 
 * The Kubernetes Operator configures the following Objects/Relationship on the APIC Controller

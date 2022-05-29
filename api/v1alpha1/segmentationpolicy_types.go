@@ -46,6 +46,7 @@ type SegmentationPolicyStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:printcolumn:name="Namespaces",type="string",JSONPath=".status.namespaces",description="Namespaces"
+//+kubebuilder:printcolumn:name="Rules",type="string",JSONPath=".status.rules",description="Rules"
 //+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 //+kubebuilder:resource:shortName=segpol
 //+kubebuilder:subresource:status

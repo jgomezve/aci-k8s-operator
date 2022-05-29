@@ -22,6 +22,10 @@ spec:
       jsonPath: .status.namespaces
       name: Namespaces
       type: string
+    - description: Rules
+      jsonPath: .status.rules
+      name: Rules
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
