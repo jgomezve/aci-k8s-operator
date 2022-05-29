@@ -13,17 +13,17 @@ spec:
     - eth: ip
       ip: tcp
       port: 443
----
-apiVersion: apic.aci.cisco/v1alpha1
-kind: SegmentationPolicy
-metadata:
-  name: segpol2
-spec:
-  namespaces:
-    - ns2
-    - ns3
-    - ns4
-  rules:
-    - eth: ip
-      ip: tcp
-      port: 443 
+# ---
+# apiVersion: apic.aci.cisco/v1alpha1
+# kind: SegmentationPolicy
+# metadata:
+#   name: segpol2
+# spec:
+#   namespaces:
+#     - ns2
+#     - ns3
+#     - ns4
+#   rules:
+#     - eth: ip
+#       ip: tcp
+#       port: 443 
