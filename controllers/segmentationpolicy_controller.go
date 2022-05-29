@@ -99,8 +99,6 @@ func (r *SegmentationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, err
 	}
 
-	logger.Info(fmt.Sprintf("[OPER-INFO]Req %s : %s - %s", req.Name, segPolObject.GetDeletionTimestamp(), segPolObject.GetFinalizers()))
-
 	// if the event is not related to delete, just check if the finalizers are rightfully set on the resource
 	if segPolObject.GetDeletionTimestamp().IsZero() && !controllerutil.ContainsFinalizer(segPolObject, finalizersSegPol) {
 		// set the finalizers of the SegmentationPolicy to the rightful ones
@@ -113,7 +111,7 @@ func (r *SegmentationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	// if the metadata.deletionTimestamp is found to be non-zero, this means that the resource is intended and just about to be deleted
 	// hence, it's time to clean up the finalizers
-	if !segPolObject.GetDeletionTimestamp().IsZero() {
+	if !segPolObject.GetDeletionTimestamp().IsZero() && controllerutil.ContainsFinalizer(segPolObject, finalizersSegPol) {
 		logger.Info("Deletion detected! Proceeding to cleanup the finalizers...")
 		if err := r.deleteSegPolicyFinalizerCallback(ctx, logger, segPolObject); err != nil {
 			logger.Error(err, "error occurred while dealing with the delete finalizer")
@@ -196,6 +194,13 @@ func (r *SegmentationPolicyReconciler) nameSpaceSegPolicyMapFunc(object client.O
 // Remove the APIC objects associated with a SegmentationPolicy
 func (r *SegmentationPolicyReconciler) deleteSegPolicyFinalizerCallback(ctx context.Context, logger logr.Logger, segPolObject *v1alpha1.SegmentationPolicy) error {
 
+	// TODO:  Update() call fails if the segPolObject is "used" (atributes are used to delete obejcts from the APIC) beforehand. Ask in Slack
+	// remove finalizer
+	controllerutil.RemoveFinalizer(segPolObject, finalizersSegPol)
+	if err := r.Update(ctx, segPolObject); err != nil {
+		return fmt.Errorf("error occurred while removing the finalizer: %w", err)
+	}
+
 	// Delete all the filters defined in the SegmenationPolicy
 	for _, rule := range segPolObject.Spec.Rules {
 		filterName := fmt.Sprintf("%s_%s%s%s", segPolObject.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
@@ -228,13 +233,6 @@ func (r *SegmentationPolicyReconciler) deleteSegPolicyFinalizerCallback(ctx cont
 			r.ApicClient.DeleteContractProvider(nsPol, fmt.Sprintf(ApplicationProfileNamePrefix, r.CniConfig.PolicyTenant), r.CniConfig.PolicyTenant, segPolObject.Name)
 		}
 	}
-
-	// remove finalizer
-	controllerutil.RemoveFinalizer(segPolObject, finalizersSegPol)
-	logger.Info("Updating Object ")
-	// if err := r.Update(ctx, segPolObject); err != nil {
-	// 	return fmt.Errorf("error occurred while removing the finalizer: %w", err)
-	// }
 	logger.Info(fmt.Sprintf("cleaned up the '%s' finalizer successfully", finalizersSegPol))
 	return nil
 }
