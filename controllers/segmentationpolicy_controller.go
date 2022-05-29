@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
@@ -42,7 +41,7 @@ import (
 )
 
 var (
-	finalizersSegPol []string = []string{"finalizers.segmentationpolicies.apic.aci.cisco/delete"}
+	finalizersSegPol = "finalizers.segmentationpolicies.apic.aci.cisco/delete"
 )
 
 // SegmentationPolicyReconciler reconciles a SegmentationPolicy object
@@ -90,9 +89,10 @@ func (r *SegmentationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 	logger := log.FromContext(ctx)
 
 	segPolObject := &v1alpha1.SegmentationPolicy{}
-	err := r.Get(ctx, types.NamespacedName{Name: req.Name, Namespace: req.Namespace}, segPolObject)
+	err := r.Get(ctx, req.NamespacedName, segPolObject)
 	if err != nil {
 		if errors.IsNotFound(err) {
+			logger.Info("SegmentationPolicy resource not found. Ignoring since object must be deleted")
 			return ctrl.Result{}, nil
 		}
 		logger.Error(err, "Error occurred while fetching the Segmentation Policy resource")
@@ -100,20 +100,18 @@ func (r *SegmentationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 
 	// if the event is not related to delete, just check if the finalizers are rightfully set on the resource
-	if segPolObject.GetDeletionTimestamp().IsZero() && !reflect.DeepEqual(finalizersSegPol, segPolObject.GetFinalizers()) {
+	if segPolObject.GetDeletionTimestamp().IsZero() && !controllerutil.ContainsFinalizer(segPolObject, finalizersSegPol) {
 		// set the finalizers of the SegmentationPolicy to the rightful ones
-		segPolObject.SetFinalizers(finalizersSegPol)
+		controllerutil.AddFinalizer(segPolObject, finalizersSegPol)
 		if err := r.Update(ctx, segPolObject); err != nil {
 			logger.Error(err, "error occurred while setting the finalizers of the SegmentationPolicy resource")
 			return ctrl.Result{}, err
 		}
 	}
 
-	//  The Finalizer callback function modifies Namespaces (Remove OpFlex annotation).
-	//  This action in turn triggers a new Reconciliation Request (SegmentationPolicy watches Namespaces).
-	//  It could be that the controller tries to delete something that is already deleted.
-	//  Workaround: Only call the Finalizer callback function if the finalizers are not empty
-	if !segPolObject.GetDeletionTimestamp().IsZero() && reflect.DeepEqual(finalizersSegPol, segPolObject.GetFinalizers()) {
+	// if the metadata.deletionTimestamp is found to be non-zero, this means that the resource is intended and just about to be deleted
+	// hence, it's time to clean up the finalizers
+	if !segPolObject.GetDeletionTimestamp().IsZero() && controllerutil.ContainsFinalizer(segPolObject, finalizersSegPol) {
 		logger.Info("Deletion detected! Proceeding to cleanup the finalizers...")
 		if err := r.deleteSegPolicyFinalizerCallback(ctx, logger, segPolObject); err != nil {
 			logger.Error(err, "error occurred while dealing with the delete finalizer")
@@ -196,6 +194,13 @@ func (r *SegmentationPolicyReconciler) nameSpaceSegPolicyMapFunc(object client.O
 // Remove the APIC objects associated with a SegmentationPolicy
 func (r *SegmentationPolicyReconciler) deleteSegPolicyFinalizerCallback(ctx context.Context, logger logr.Logger, segPolObject *v1alpha1.SegmentationPolicy) error {
 
+	// TODO:  Update() call fails if the segPolObject is "used" (atributes are used to delete obejcts from the APIC) beforehand. Ask in Slack
+	// remove finalizer
+	controllerutil.RemoveFinalizer(segPolObject, finalizersSegPol)
+	if err := r.Update(ctx, segPolObject); err != nil {
+		return fmt.Errorf("error occurred while removing the finalizer: %w", err)
+	}
+
 	// Delete all the filters defined in the SegmenationPolicy
 	for _, rule := range segPolObject.Spec.Rules {
 		filterName := fmt.Sprintf("%s_%s%s%s", segPolObject.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
@@ -227,12 +232,6 @@ func (r *SegmentationPolicyReconciler) deleteSegPolicyFinalizerCallback(ctx cont
 			r.ApicClient.DeleteContractConsumer(nsPol, fmt.Sprintf(ApplicationProfileNamePrefix, r.CniConfig.PolicyTenant), r.CniConfig.PolicyTenant, segPolObject.Name)
 			r.ApicClient.DeleteContractProvider(nsPol, fmt.Sprintf(ApplicationProfileNamePrefix, r.CniConfig.PolicyTenant), r.CniConfig.PolicyTenant, segPolObject.Name)
 		}
-	}
-
-	// remove finalizer
-	controllerutil.RemoveFinalizer(segPolObject, finalizersSegPol[0])
-	if err := r.Update(ctx, segPolObject); err != nil {
-		return fmt.Errorf("error occurred while removing the finalizer: %w", err)
 	}
 	logger.Info(fmt.Sprintf("cleaned up the '%s' finalizer successfully", finalizersSegPol))
 	return nil
