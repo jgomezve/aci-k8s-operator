@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -245,6 +246,13 @@ func (r *SegmentationPolicyReconciler) ReconcileNamespacesEpgs(ctx context.Conte
 		nsClusterNames = append(nsClusterNames, ns.Name)
 	}
 
+	// Set the status
+	segPolObject.Status.Namespaces = strings.Join(utils.Intersect(nsClusterNames, segPolObject.Spec.Namespaces), ", ")
+	err := r.Status().Update(context.Background(), segPolObject)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	// Always create/overwrite the same Application Profile
 	logger.Info(fmt.Sprintf("Creating Application Profile %s", segPolObject.Name))
 	r.ApicClient.CreateApplicationProfile(fmt.Sprintf(ApplicationProfileNamePrefix, r.CniConfig.PolicyTenant), "", r.CniConfig.PolicyTenant)
@@ -309,6 +317,13 @@ func (r *SegmentationPolicyReconciler) ReconcileRulesFilters(logger logr.Logger,
 	//Create Filters and filter entries based on the policy rules
 	filtersSegPol := []string{}
 
+	// Set the status
+	segPolObject.Status.Rules = r.GetRuleStatus(segPolObject)
+	err := r.Status().Update(context.Background(), segPolObject)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	// Create Filters for those rules listed in the SegmentationPolicy
 	for _, rule := range segPolObject.Spec.Rules {
 		filterName := fmt.Sprintf("%s_%s%s%s", segPolObject.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
@@ -360,4 +375,20 @@ func (r *SegmentationPolicyReconciler) RemoveAnnotationNamesapce(ctx context.Con
 		return err
 	}
 	return nil
+}
+
+func (r *SegmentationPolicyReconciler) GetRuleStatus(segPolObject *v1alpha1.SegmentationPolicy) string {
+
+	aux := []string{}
+	for _, rule := range segPolObject.Spec.Rules {
+		val := rule.Eth
+		if rule.IP != "" {
+			val = val + "-" + rule.IP
+		}
+		if rule.Port != 0 {
+			val = val + "-" + strconv.Itoa(rule.Port)
+		}
+		aux = append(aux, val)
+	}
+	return strings.Join(aux, ", ")
 }
