@@ -235,12 +235,6 @@ func (r *SegmentationPolicyReconciler) deleteSegPolicyFinalizerCallback(ctx cont
 		return fmt.Errorf("error occurred while deleting contract: %w", err)
 	}
 
-	segPolObject.Status.State = "Filters Deleted"
-	err := r.Status().Update(context.Background(), segPolObject)
-	if err != nil {
-		return fmt.Errorf("error occurred while setting the status: %w", err)
-	}
-
 	// Check the EPGs associated with the SegmentationPolicy
 	for _, nsPol := range segPolObject.Spec.Namespaces {
 		logger.Info(fmt.Sprintf("EPG must be updated %s", nsPol))
