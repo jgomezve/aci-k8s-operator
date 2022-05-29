@@ -354,7 +354,7 @@ func (r *SegmentationPolicyReconciler) ReconcileRulesFilters(logger logr.Logger,
 	filtersSegPol := []string{}
 
 	// Set the status
-	segPolObject.Status.Rules = r.GetRuleStatus(segPolObject)
+	segPolObject.Status.Rules = flattenRules(segPolObject.Spec.Rules)
 	err := r.Status().Update(context.Background(), segPolObject)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -411,20 +411,4 @@ func (r *SegmentationPolicyReconciler) RemoveAnnotationNamesapce(ctx context.Con
 		return err
 	}
 	return nil
-}
-
-func (r *SegmentationPolicyReconciler) GetRuleStatus(segPolObject *v1alpha1.SegmentationPolicy) string {
-
-	aux := []string{}
-	for _, rule := range segPolObject.Spec.Rules {
-		val := rule.Eth
-		if rule.IP != "" {
-			val = val + "-" + rule.IP
-		}
-		if rule.Port != 0 {
-			val = val + "-" + strconv.Itoa(rule.Port)
-		}
-		aux = append(aux, val)
-	}
-	return strings.Join(aux, ", ")
 }

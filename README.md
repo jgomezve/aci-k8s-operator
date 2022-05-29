@@ -268,8 +268,8 @@ spec:
 
 ```
       $ kubectl get segmentationpolicies
-      NAME      NAMESPACES   RULES                   AGE
-      segpol1   ns1, ns2     ip-tcp-443              29s
+      NAME      NAMESPACES   RULES        STATE      AGE
+      segpol1   ns1, ns2     ip-tcp-443   Enforced   20s
 ```
 
 * The Kubernetes Operator configures the following Objects/Relationship on the APIC Controller
