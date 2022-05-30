@@ -228,9 +228,11 @@ Connectivity from the Operator's Pod to the APIC controller can satisfied by any
 
 ```
       $ kubectl apply  -f config/samples/controller_lightweight.yaml
-      namespace/system created
+      namespace/aci-k8s-operator-system created
       deployment.apps/controller-manager created
       serviceaccount/controller-manager created
+      clusterrole.rbac.authorization.k8s.io/manager-role created
+      clusterrolebinding.rbac.authorization.k8s.io/manager-rolebinding created
 ```
 
 *  Check the Controler status
