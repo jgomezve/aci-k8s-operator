@@ -220,10 +220,10 @@ Connectivity from the Operator's Pod to the APIC controller can satisfied by any
 ```
 
 * Alternatively you could apply the manifest `config/samples/controller_lightweight.yaml` directly. This manifest creates the minimum resources required to run the operator inside the Kubernetes Cluster:
-  * A `Namespace` which container namespace scoped resources
-  * A `ServiceAccount` which grant the Operator access tot he Kubernetes API Server
+  * A `Namespace` which contains the  namespace-scoped resources
+  * A `ServiceAccount` which grants the Operator access tot he Kubernetes API Server
   * A `ClusterRole` listing the resources and actions the Operator has access to
-  * A `ClusterRoleBinding` which binds the Role with the service account
+  * A `ClusterRoleBinding` which binds the `Role` with the `ServiceAccount`
   * A `Deployment` of one replica hosting the Operator code.
 
 ```
