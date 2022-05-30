@@ -65,6 +65,16 @@ func (ac *ApicClientMocks) DeleteApplicationProfile(name, tenantName string) err
 	return nil
 }
 
+func (ac *ApicClientMocks) EmptyApplicationProfile(name, tenantName string) (bool, error) {
+	count := 0
+	for _, epg := range ac.endpointGroups {
+		if epg.app == name && epg.tnt == tenantName {
+			count = count + 1
+		}
+	}
+	return count == 0, nil
+}
+
 func (ac *ApicClientMocks) CreateEndpointGroup(name, description, appName, tenantName, bdName, vmmName string) error {
 	dn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s", tenantName, appName, name)
 	fmt.Printf("Creating EPG %s \n", dn)

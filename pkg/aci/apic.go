@@ -24,6 +24,7 @@ type ApicInterface interface {
 	DeleteTenant(name string) error
 	CreateApplicationProfile(name, description, tenantName string) error
 	DeleteApplicationProfile(name, tenantName string) error
+	EmptyApplicationProfile(name, tenantName string) (bool, error)
 	CreateEndpointGroup(name, description, appName, tenantName, bdName, vmmName string) error
 	DeleteEndpointGroup(name, appName, tenantName string) error
 	CreateFilterAndFilterEntry(tenantName, name, eth, ip string, port int) error
@@ -115,6 +116,18 @@ func (ac *ApicClient) DeleteApplicationProfile(name, tenantName string) error {
 		return err
 	}
 	return nil
+}
+
+func (ac *ApicClient) EmptyApplicationProfile(name, tenantName string) (bool, error) {
+	epgList, err := ac.client.ListApplicationEPG(name, tenantName)
+	if err != nil {
+		if err.Error() == "Error retrieving Object: Object may not exists" {
+			return true, nil
+		}
+		return false, err
+	}
+	return len(epgList) == 0, nil
+
 }
 
 /*
