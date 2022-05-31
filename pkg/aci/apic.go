@@ -24,6 +24,7 @@ type ApicInterface interface {
 	DeleteTenant(name string) error
 	CreateApplicationProfile(name, description, tenantName string) error
 	DeleteApplicationProfile(name, tenantName string) error
+	ApplicationProfileExists(name, tenantName string) (bool, error)
 	EmptyApplicationProfile(name, tenantName string) (bool, error)
 	CreateEndpointGroup(name, description, appName, tenantName, bdName, vmmName string) error
 	DeleteEndpointGroup(name, appName, tenantName string) error
@@ -128,6 +129,22 @@ func (ac *ApicClient) EmptyApplicationProfile(name, tenantName string) (bool, er
 	}
 	return len(epgList) == 0, nil
 
+}
+
+func (ac *ApicClient) ApplicationProfileExists(name, tenantName string) (bool, error) {
+
+	fvAppCont, err := ac.client.Get(fmt.Sprintf("uni/tn-%s/ap-%s", tenantName, name))
+	if err != nil {
+		// TODO: Check when is an actual error
+		return false, err
+	}
+	fvApp := models.ApplicationEPGFromContainer(fvAppCont)
+
+	if fvApp.DistinguishedName == "" {
+		return false, nil
+	}
+
+	return true, nil
 }
 
 /*
