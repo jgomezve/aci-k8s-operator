@@ -236,8 +236,7 @@ func (r *SegmentationPolicyReconciler) deleteSegPolicyFinalizerCallback(ctx cont
 
 	// If there are not more EPGs in the Application Profile, delete the Application profile
 	logger.Info(fmt.Sprintf("Checking EPGs in Application Profile %s", fmt.Sprintf(ApplicationProfileNamePrefix, r.CniConfig.PolicyTenant)))
-	empty, _ := r.ApicClient.EmptyApplicationProfile(fmt.Sprintf(ApplicationProfileNamePrefix, r.CniConfig.PolicyTenant), r.CniConfig.PolicyTenant)
-	if empty {
+	if empty, _ := r.ApicClient.EmptyApplicationProfile(fmt.Sprintf(ApplicationProfileNamePrefix, r.CniConfig.PolicyTenant), r.CniConfig.PolicyTenant); empty {
 		r.ApicClient.DeleteApplicationProfile(fmt.Sprintf(ApplicationProfileNamePrefix, r.CniConfig.PolicyTenant), r.CniConfig.PolicyTenant)
 	}
 	logger.Info(fmt.Sprintf("cleaned up the '%s' finalizer successfully", finalizersSegPol))

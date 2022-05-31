@@ -135,10 +135,10 @@ func (ac *ApicClient) ApplicationProfileExists(name, tenantName string) (bool, e
 
 	fvAppCont, err := ac.client.Get(fmt.Sprintf("uni/tn-%s/ap-%s", tenantName, name))
 	if err != nil {
-		// TODO: Check when is an actual error
+		// TODO: Check when it is an real error
 		return false, err
 	}
-	fvApp := models.ApplicationEPGFromContainer(fvAppCont)
+	fvApp := models.ApplicationProfileFromContainer(fvAppCont)
 
 	if fvApp.DistinguishedName == "" {
 		return false, nil
