@@ -166,6 +166,12 @@ var _ = Describe("Segmentation Policy controller", func() {
 				apicFilters, _ := apicClient.GetContractFilters(segPol1.Name, cniConf.PolicyTenant)
 				Expect(apicFilters).Should(Equal(filters))
 			})
+			By("Checking created APIC Application Profile", func() {
+				Eventually(func() bool {
+					exists, _ := apicClient.ApplicationProfileExists(fmt.Sprintf(ApplicationProfileNamePrefix, cniConf.PolicyTenant), cniConf.PolicyTenant)
+					return exists
+				}, timeout, interval).Should(BeTrue())
+			})
 			By("Checking created APIC EPGs", func() {
 				for _, ns := range segPol1.Spec.Namespaces {
 					Eventually(func() bool {
@@ -362,6 +368,12 @@ var _ = Describe("Segmentation Policy controller", func() {
 					return err == nil
 				}, timeout, interval).Should(BeFalse())
 			})
+			By("Checking created APIC Application Profile", func() {
+				Eventually(func() bool {
+					exists, _ := apicClient.ApplicationProfileExists(fmt.Sprintf(ApplicationProfileNamePrefix, cniConf.PolicyTenant), cniConf.PolicyTenant)
+					return exists
+				}, timeout, interval).Should(BeTrue())
+			})
 			By("Checking deleted APIC filters", func() {
 				for _, rule := range segPol1.Spec.Rules {
 					filterName := fmt.Sprintf("%s_%s%s%s", segPol1.Name, rule.Eth, rule.IP, strconv.Itoa(rule.Port))
@@ -438,7 +450,7 @@ var _ = Describe("Segmentation Policy controller", func() {
 
 	// Delete K8s Namespaces alreay listed in a SegmentationPolicy
 	// TODO: Namespaces cannot be deleted from EnvTest. See https://github.com/kubernetes-sigs/controller-runtime/issues/880
-	Context("When deleting a namespace, which is degined in multiple Segmentation Policies", func() {
+	Context("When deleting a namespace, which is defined in multiple Segmentation Policies", func() {
 		It("Should update the affected Segmentation Policies", func() {
 			// By("Deleting new K8s Namespaces", func() {
 			// 	newNs := &corev1.Namespace{
@@ -486,6 +498,12 @@ var _ = Describe("Segmentation Policy controller", func() {
 						}, timeout, interval).Should(BeFalse())
 					}
 				}
+			})
+			By("Checking deleted APIC Application Profile", func() {
+				Eventually(func() bool {
+					exists, _ := apicClient.ApplicationProfileExists(fmt.Sprintf(ApplicationProfileNamePrefix, cniConf.PolicyTenant), cniConf.PolicyTenant)
+					return exists
+				}, timeout, interval).Should(BeFalse())
 			})
 			By("Checking deleted APIC EPGs", func() {
 				for _, segPol := range []v1alpha1.SegmentationPolicy{*segPol1, *segPol2} {

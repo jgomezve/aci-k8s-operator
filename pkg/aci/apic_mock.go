@@ -6,6 +6,11 @@ import (
 	"github.com/jgomezve/aci-k8s-operator/pkg/utils"
 )
 
+type applicationProfile struct {
+	name string
+	tnt  string
+}
+
 type endpointGroup struct {
 	name      string
 	tnt       string
@@ -31,15 +36,17 @@ type filter struct {
 }
 
 type ApicClientMocks struct {
-	filters        map[string]filter
-	endpointGroups map[string]endpointGroup
-	contracts      map[string]contract
+	filters             map[string]filter
+	endpointGroups      map[string]endpointGroup
+	contracts           map[string]contract
+	applicationProfiles map[string]applicationProfile
 }
 
 func init() {
 	ApicMockClient.filters = map[string]filter{}
 	ApicMockClient.endpointGroups = map[string]endpointGroup{}
 	ApicMockClient.contracts = map[string]contract{}
+	ApicMockClient.applicationProfiles = map[string]applicationProfile{}
 }
 
 var (
@@ -57,12 +64,34 @@ func (ac *ApicClientMocks) DeleteTenant(name string) error {
 }
 
 func (ac *ApicClientMocks) CreateApplicationProfile(name, description, tenantName string) error {
-	fmt.Printf("Creating Application Profile %s in Tenant %s\n", name, tenantName)
+	dn := fmt.Sprintf("uni/tn-%s/ap-%s", tenantName, name)
+	fmt.Printf("Creating App %s \n", dn)
+	ac.applicationProfiles[dn] = applicationProfile{name: name, tnt: tenantName}
 	return nil
 }
 
 func (ac *ApicClientMocks) DeleteApplicationProfile(name, tenantName string) error {
+	dn := fmt.Sprintf("uni/tn-%s/ap-%s", tenantName, name)
+	fmt.Printf("Deleting App %s \n", dn)
+	delete(ac.applicationProfiles, dn)
 	return nil
+}
+
+func (ac *ApicClientMocks) ApplicationProfileExists(name, tenantName string) (bool, error) {
+	dn := fmt.Sprintf("uni/tn-%s/ap-%s", tenantName, name)
+	fmt.Printf("Checking if App %s exists\n", dn)
+	_, exists := ac.applicationProfiles[dn]
+	return exists, nil
+}
+
+func (ac *ApicClientMocks) EmptyApplicationProfile(name, tenantName string) (bool, error) {
+	count := 0
+	for _, epg := range ac.endpointGroups {
+		if epg.app == name && epg.tnt == tenantName {
+			count = count + 1
+		}
+	}
+	return count == 0, nil
 }
 
 func (ac *ApicClientMocks) CreateEndpointGroup(name, description, appName, tenantName, bdName, vmmName string) error {
