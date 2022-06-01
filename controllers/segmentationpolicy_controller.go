@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -31,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
@@ -99,6 +101,12 @@ func (r *SegmentationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, err
 	}
 
+	segPolObject.Status.State = "Creating"
+	err = r.Status().Update(context.Background(), segPolObject)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("error occurred while setting the status: %w", err)
+	}
+
 	// if the event is not related to delete, just check if the finalizers are rightfully set on the resource
 	if segPolObject.GetDeletionTimestamp().IsZero() && !controllerutil.ContainsFinalizer(segPolObject, finalizersSegPol) {
 		// set the finalizers of the SegmentationPolicy to the rightful ones
@@ -126,6 +134,12 @@ func (r *SegmentationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return result, err
 	}
 
+	segPolObject.Status.State = "EPGs Created"
+	err = r.Status().Update(context.Background(), segPolObject)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("error occurred while setting the status: %w", err)
+	}
+
 	// Create Contract and Subject and associate the filters
 	filtersSegPol := []string{}
 	for _, rule := range segPolObject.Spec.Rules {
@@ -151,6 +165,11 @@ func (r *SegmentationPolicyReconciler) Reconcile(ctx context.Context, req ctrl.R
 	if err != nil {
 		return result, err
 	}
+	segPolObject.Status.State = "Enforced"
+	err = r.Status().Update(context.Background(), segPolObject)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("error occurred while setting the status: %w", err)
+	}
 
 	return ctrl.Result{}, nil
 }
@@ -161,6 +180,8 @@ func (r *SegmentationPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		For(&v1alpha1.SegmentationPolicy{}).
 		Watches(&source.Kind{Type: &corev1.Namespace{}},
 			handler.EnqueueRequestsFromMapFunc(r.nameSpaceSegPolicyMapFunc)).
+		//TODO: Make the code convergent. Status attributes should only be modified if the APIC is actually modified
+		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(r)
 }
 
@@ -254,6 +275,13 @@ func (r *SegmentationPolicyReconciler) ReconcileNamespacesEpgs(ctx context.Conte
 		nsClusterNames = append(nsClusterNames, ns.Name)
 	}
 
+	// Set the status
+	segPolObject.Status.Namespaces = strings.Join(utils.Intersect(nsClusterNames, segPolObject.Spec.Namespaces), ", ")
+	err := r.Status().Update(context.Background(), segPolObject)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("error occurred while setting the status: %w", err)
+	}
+
 	// Always create/overwrite the same Application Profile
 	logger.Info(fmt.Sprintf("Creating Application Profile %s", segPolObject.Name))
 	r.ApicClient.CreateApplicationProfile(fmt.Sprintf(ApplicationProfileNamePrefix, r.CniConfig.PolicyTenant), "", r.CniConfig.PolicyTenant)
@@ -317,6 +345,13 @@ func (r *SegmentationPolicyReconciler) ReconcileNamespacesEpgs(ctx context.Conte
 func (r *SegmentationPolicyReconciler) ReconcileRulesFilters(logger logr.Logger, segPolObject *v1alpha1.SegmentationPolicy) (ctrl.Result, error) {
 	//Create Filters and filter entries based on the policy rules
 	filtersSegPol := []string{}
+
+	// Set the status
+	segPolObject.Status.Rules = flattenRules(segPolObject.Spec.Rules)
+	err := r.Status().Update(context.Background(), segPolObject)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 
 	// Create Filters for those rules listed in the SegmentationPolicy
 	for _, rule := range segPolObject.Spec.Rules {

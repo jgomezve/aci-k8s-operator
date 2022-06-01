@@ -40,14 +40,20 @@ type RuleSpec struct {
 
 // SegmentationPolicyStatus defines the observed state of SegmentationPolicy
 type SegmentationPolicyStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Namespaces string `json:"namespaces"`
+	Rules      string `json:"rules"`
+	State      string `json:"state"`
 }
 
 //+kubebuilder:object:root=true
+//+kubebuilder:printcolumn:name="Namespaces",type="string",JSONPath=".status.namespaces",description="Namespaces"
+//+kubebuilder:printcolumn:name="Rules",type="string",JSONPath=".status.rules",description="Rules"
+//+kubebuilder:printcolumn:name="State",type="string",JSONPath=".status.state",description="APIC Objects state"
+//+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 //+kubebuilder:resource:shortName=segpol
 //+kubebuilder:subresource:status
 
+// Group is the Schema for the groups API
 // SegmentationPolicy is the Schema for the segmentationpolicies API
 type SegmentationPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
