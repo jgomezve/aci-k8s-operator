@@ -65,7 +65,7 @@ This repository has been scaffolded using [Kubebuilder](https://book.kubebuilder
 * Alternatively you could apply the manifest directly
 
 ```
-      $ kubectl -f apply config/crd/bases/apic.aci.cisco_segmentationpolicies.yaml
+      $ kubectl apply -f config/crd/bases/apic.aci.cisco_segmentationpolicies.yaml
       customresourcedefinition.apiextensions.k8s.io/segmentationpolicies.apic.aci.cisco configured
 ```
 
