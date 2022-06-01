@@ -2,6 +2,7 @@
 
 [![Tests](https://github.com/jgomezve/aci-k8s-operator/actions/workflows/test.yaml/badge.svg)](https://github.com/jgomezve/aci-k8s-operator/actions/workflows/test.yaml)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/jgomezve/aci-k8s-operator)
+[![Go Report Card](https://goreportcard.com/badge/github.com/jgomezve/aci-k8s-operator)](https://goreportcard.com/report/github.com/jgomezve/aci-k8s-operator)
 ![Kubernetes version](https://img.shields.io/badge/kubernetes-1.23%2B-blue)
 [![published](https://static.production.devnetcloud.com/codeexchange/assets/images/devnet-published.svg)](https://developer.cisco.com/codeexchange/github/repo/jgomezve/aci-k8s-operator)
 
@@ -65,7 +66,7 @@ This repository has been scaffolded using [Kubebuilder](https://book.kubebuilder
 * Alternatively you could apply the manifest directly
 
 ```
-      $ kubectl -f apply config/crd/bases/apic.aci.cisco_segmentationpolicies.yaml
+      $ kubectl apply -f config/crd/bases/apic.aci.cisco_segmentationpolicies.yaml
       customresourcedefinition.apiextensions.k8s.io/segmentationpolicies.apic.aci.cisco configured
 ```
 
