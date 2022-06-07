@@ -26,7 +26,7 @@ spec:
       containers:
       - command:
         - /manager
-        image: jgomezve/aci-k8s-operator:latest
+        image: jgomezve/aci-k8s-operator:0.1.0
         name: manager
       serviceAccountName: controller-manager
 ---
