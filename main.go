@@ -146,9 +146,9 @@ func main() {
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
-		MetricsBindAddress:     "0",
+		MetricsBindAddress:     metricsAddr,
 		Port:                   9443,
-		HealthProbeBindAddress: "0",
+		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "1d45f356.aci.cisco",
 		// Disable cache for configMaps/Pods as we need to read ACI Configuration before starting the Manager/Controllers
