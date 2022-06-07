@@ -90,7 +90,7 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     needs:
-     - build
+     - release
     steps:
       - name: Webex Notification
         if: always()
