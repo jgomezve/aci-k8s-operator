@@ -5,6 +5,8 @@ on:
     paths-ignore:
       - '*.md'
       - docs/images/*
+    branches-ignore:
+      - '*.*.*'
 
   pull_request:
     branches: [ master ]
