@@ -3,7 +3,7 @@ module github.com/jgomezve/aci-k8s-operator
 go 1.17
 
 require (
-	github.com/ciscoecosystem/aci-go-client v1.42.0
+	github.com/ciscoecosystem/aci-go-client v1.45.0
 	github.com/go-logr/logr v1.2.3
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.16.0
 	github.com/onsi/ginkgo v1.16.5
